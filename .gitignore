@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Reverse engineering scratch: the vendor bundle is third-party code and
+# several megabytes. See README for how to fetch it.
+research/
+
+# OS
+.DS_Store
