@@ -1,5 +1,7 @@
 # Darmoshark M3 — configurador aberto
 
+**Português** · [English](README.en.md)
+
 Controle de DPI, taxa de resposta e demais ajustes do mouse **Darmoshark M3**
 (vendido também como **Attack Shark M3**) no **macOS**, sem o software oficial
 e sem precisar do receptor 2.4GHz — funciona pelo cabo USB-C.
