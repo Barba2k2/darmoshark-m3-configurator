@@ -1,139 +1,138 @@
-# Darmoshark M3 — configurador aberto
+# Darmoshark M3 — open configurator
 
-**Português** · [English](README.en.md)
+**English** · [Português](README.pt-BR.md)
 
-Controle de DPI, taxa de resposta e demais ajustes do mouse **Darmoshark M3**
-(vendido também como **Attack Shark M3**) no **macOS**, sem o software oficial
-e sem precisar do receptor 2.4GHz — funciona pelo cabo USB-C.
+Control DPI, polling rate and the remaining settings of the **Darmoshark M3**
+mouse (also sold as **Attack Shark M3**) on **macOS**, without the vendor
+software and without the 2.4GHz receiver — it works over the USB-C cable.
 
-O protocolo foi obtido por engenharia reversa do configurador WebHID oficial
-(`darmoshark.cc`) e validado no hardware. Não havia documentação pública desse
-protocolo em lugar nenhum.
+The protocol was reverse engineered from the official WebHID configurator
+(`darmoshark.cc`) and validated against real hardware. No public documentation
+of this protocol existed anywhere.
 
-## Por que existe
+## Why this exists
 
-O software do fabricante é uma página WebHID que depende de servidores na
-China, e não há aplicativo nativo para macOS. Este projeto entrega os mesmos
-ajustes em uma CLI e uma janela nativa, funcionando offline.
+The vendor software is a WebHID page that depends on servers in China, and
+there is no native macOS application. This project delivers the same settings
+through a CLI and a native window, working offline.
 
-## Instalação
+## Install
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-## Uso
+## Usage
 
-### Interface gráfica
+### Graphical interface
 
 ```bash
 PYTHONPATH=src .venv/bin/python src/gui/app.py
 ```
 
-Cinco níveis de DPI, cada um com a cor real do LED indicador do mouse, campos
-livres de 50 a 26000, taxa de resposta, altura de acionamento, debounce e
-temporizador de suspensão.
+Five DPI levels, each carrying the real colour of the mouse indicator LED, free
+value fields from 50 to 26000, polling rate, lift-off distance, debounce and
+sleep timer.
 
-### Linha de comando
+### Command line
 
 ```bash
-PYTHONPATH=src .venv/bin/python src/cli.py <comando>
+PYTHONPATH=src .venv/bin/python src/cli.py <command>
 ```
 
-| Comando | Descrição | Cabo |
+| Command | Description | Cable |
 |---|---|---|
-| `list` | interfaces HID expostas pelo mouse | ✅ |
-| `capabilities` | o que o modelo suporta (offline) | ✅ |
-| `colors` | legenda de cores do LED | ✅ |
-| `battery` | identidade e bateria | ✅ |
-| `dfu` | módulo, firmware e revisão de hardware | ✅ |
-| `dpi 400 800 1600 3200 4800 --active 3` | grava os níveis | ✅ |
-| `use 3` | troca o nível ativo | ✅ |
-| `rate 1000 1000 1000 1000 1000` | taxa de resposta (afeta o modo sem fio) | ✅ |
-| `debounce 8` | debounce do clique, em ms | ✅ |
-| `lod 1` | altura de acionamento (1 baixa, 2 alta) | ✅ |
-| `sleep 10` | suspender após N minutos | ✅ |
-| `profile 0` | troca o perfil interno | ✅ |
-| `button 3 dpi` | remapeia um botão | ✅ |
-| `reset` | restaura o padrão de fábrica | ✅ |
-| `info` | configuração completa gravada | ⚠️ só com dongle |
-| `buttons` | atribuições atuais dos botões | ⚠️ só com dongle |
+| `list` | HID interfaces exposed by the mouse | ✅ |
+| `capabilities` | what this model supports (offline) | ✅ |
+| `colors` | LED colour legend | ✅ |
+| `battery` | identity and battery | ✅ |
+| `dfu` | module, firmware and hardware revision | ✅ |
+| `dpi 400 800 1600 3200 4800 --active 3` | program the levels | ✅ |
+| `use 3` | switch the active level | ✅ |
+| `rate 1000 1000 1000 1000 1000` | polling rate (affects wireless modes) | ✅ |
+| `debounce 8` | click debounce, in ms | ✅ |
+| `lod 1` | lift-off distance (1 low, 2 high) | ✅ |
+| `sleep 10` | sleep after N minutes | ✅ |
+| `profile 0` | switch the onboard profile | ✅ |
+| `button 3 dpi` | remap a button | ✅ |
+| `reset` | restore factory defaults | ✅ |
+| `info` | full stored configuration | ⚠️ dongle only |
+| `buttons` | current button assignments | ⚠️ dongle only |
 
-Descobrir o DPI ativo sem dongle é possível pela cor do LED — `colors` mostra a
-legenda.
+Finding the active DPI without a dongle is possible through the LED colour —
+`colors` prints the legend.
 
-## O que o cabo permite
+## What the cable allows
 
-| Operação | Cabo (feature `0x52`) | Dongle 2.4GHz |
+| Operation | Cable (feature `0x52`) | 2.4GHz dongle |
 |---|---|---|
-| Escrever configuração | ✅ | ✅ |
-| Ler configuração | ❌ devolve sempre a identidade | ✅ |
-| Identidade, firmware, bateria | ✅ | ✅ |
-| Até 5 níveis de DPI | ✅ | ✅ |
-| 6 ou mais níveis | ❌ formato estendido é ignorado | não testado |
+| Write configuration | ✅ | ✅ |
+| Read configuration | ❌ always answers with identity | ✅ |
+| Identity, firmware, battery | ✅ | ✅ |
+| Up to 5 DPI levels | ✅ | ✅ |
+| 6 or more levels | ❌ extended format is ignored | untested |
 
-Detalhes completos do protocolo em [PROTOCOL.md](PROTOCOL.md): os três canais
-HID, a tabela de 31 opcodes, o formato de cada pacote e os canais que **não**
-funcionam.
+Full protocol details in [PROTOCOL.md](PROTOCOL.md): the three HID channels,
+the 31 opcode table, every packet layout, and the channels that do **not**
+work.
 
-## Hardware validado
+## Validated hardware
 
 | | |
 |---|---|
-| Modelo | Darmoshark M3 (Attack Shark M3) |
+| Model | Darmoshark M3 (Attack Shark M3) |
 | VID:PID | `0x248A:0xFF12` |
-| Módulo | `MOTO_M3` |
+| Module | `MOTO_M3` |
 | Firmware | `2.0.9r` |
 | Hardware | `1.0.0` |
 | Sensor | PAW3395, 50–26000 DPI |
-| Bateria | 500 mAh |
-| Sistema | macOS 26.6 (arm64) |
+| Battery | 500 mAh |
+| System | macOS 26.6 (arm64) |
 
-Outros modelos Darmoshark que usam o mesmo protocolo podem funcionar, mas não
-foram testados.
+Other Darmoshark models sharing this protocol may work, but were not tested.
 
-## Estrutura
+## Layout
 
 ```
-src/darmoshark/    protocolo, montagem de pacotes, decodificadores, transporte HID
-src/gui/           interface PySide6 (um widget por arquivo)
-src/cli.py         interface de linha de comando
-tests/             testes de codificação dos pacotes
-reference/         definições públicas do fabricante para este modelo
+src/darmoshark/    protocol, packet builders, decoders, HID transport
+src/gui/           PySide6 interface (one widget per file)
+src/cli.py         command line interface
+tests/             packet encoding tests
+reference/         public vendor definitions for this model
 ```
 
-## Testes
+## Tests
 
 ```bash
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests
 ```
 
-Os testes verificam que os pacotes gerados são idênticos, byte a byte, aos que
-o software oficial monta, além das validações de faixa.
+The tests verify that the generated packets are byte-identical to the ones the
+vendor software builds, plus the range validations.
 
-## Reproduzir a engenharia reversa
+## Reproducing the reverse engineering
 
-O protocolo saiu do bundle JavaScript do configurador oficial:
+The protocol came out of the official configurator's JavaScript bundle:
 
 ```bash
 curl -s https://www.darmoshark.cc/ -o index.html
-# baixe o main.*.js referenciado e desminifique (jsbeautifier)
+# download the referenced main.*.js and beautify it (jsbeautifier)
 ```
 
-A definição pública deste modelo está em `reference/`, obtida de:
+The public definition of this model lives in `reference/`, fetched from:
 
 - `https://launcher.keychron.com/vapi/v2/product/613089042`
 - `https://launcher.keychron.com/static/device/613089042/json/v3.json`
 
-O `613089042` é o `vpId`, calculado como `vid << 16 | pid`.
+`613089042` is the `vpId`, computed as `vid << 16 | pid`.
 
-## Aviso
+## Disclaimer
 
-Projeto independente, sem vínculo com Darmoshark, Attack Shark, Motospeed ou
-Keychron. Escrever configuração em um dispositivo USB tem risco: use por sua
-conta. O comando `reset` restaura o padrão de fábrica caso algo saia do lugar.
+Independent project, not affiliated with Darmoshark, Attack Shark, Motospeed or
+Keychron. Writing configuration to a USB device carries risk: use at your own.
+The `reset` command restores factory defaults if anything ends up misplaced.
 
-## Licença
+## License
 
 MIT
