@@ -1,0 +1,119 @@
+{
+  "name": "Darmoshark M3",
+  "type": "mouse",
+  "size": [
+    1200,
+    2000
+  ],
+  "keys": [
+    {
+      "x": 462,
+      "y": 216,
+      "dir": "left",
+      "index": 0,
+      "custom": true,
+      "w": 451
+    },
+    {
+      "x": 733,
+      "y": 208,
+      "w": 480,
+      "dir": "right",
+      "custom": true,
+      "index": 2
+    },
+    {
+      "x": 601,
+      "y": 458,
+      "w": 591,
+      "dir": "left",
+      "custom": true,
+      "index": 1
+    },
+    {
+      "x": 177,
+      "y": 771,
+      "w": 169,
+      "dir": "left",
+      "custom": true,
+      "index": 3
+    },
+    {
+      "x": 181,
+      "y": 982,
+      "w": 175,
+      "dir": "left",
+      "custom": true,
+      "index": 4
+    }
+  ],
+  "dpi": {
+    "limit": [
+      50,
+      26000
+    ],
+    "level": [
+      400,
+      800,
+      1600,
+      3200,
+      4800
+    ],
+    "reportRate": [
+      {
+        "value": 125,
+        "color": "#ff0000"
+      },
+      {
+        "value": 500,
+        "color": "#0060ff"
+      },
+      {
+        "value": 1000,
+        "color": "#12ff00"
+      }
+    ],
+    "colors": [
+      "#ff0000",
+      "#0060ff",
+      "#12ff00",
+      "#e218ff",
+      "#f9e14c",
+      "#e218ff"
+    ]
+  },
+  "sys": {
+    "lod": [
+      {
+        "index": 1,
+        "value": "common.low"
+      },
+      {
+        "index": 2,
+        "value": "common.high"
+      }
+    ],
+    "disSensor": false
+  },
+  "light": null,
+  "images": [
+    {
+      "cover": "upload/cover/27/1737451132474.png",
+      "colors": [
+        "#FFFFFF"
+      ]
+    },
+    {
+      "cover": "upload/cover/27/1737451181231.png",
+      "colors": [
+        "#000000"
+      ]
+    },
+    {
+      "cover": "upload/cover/27/1737451196530.png",
+      "colors": [
+        "#c4bcb1"
+      ]
+    }
+  ]
+}
