@@ -1,5 +1,7 @@
 # Darmoshark M3 — protocolo de configuração (contract `dms`)
 
+[English](PROTOCOL.md) · **Português**
+
 Engenharia reversa do bundle do configurador WebHID oficial (`darmoshark.cc`,
 app Angular sobre a plataforma Keychron). O mouse vendido como **Attack Shark M3**
 se identifica no firmware como **Darmoshark M3**.
