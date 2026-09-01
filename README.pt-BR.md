@@ -57,21 +57,31 @@ PYTHONPATH=src .venv/bin/python src/cli.py <comando>
 | `profile 0` | troca o perfil interno | ✅ |
 | `button 3 dpi` | remapeia um botão | ✅ |
 | `reset` | restaura o padrão de fábrica | ✅ |
-| `info` | configuração completa gravada | ⚠️ só com dongle |
-| `buttons` | atribuições atuais dos botões | ⚠️ só com dongle |
+| `info` | configuração completa gravada | ⚠️ só com receptor |
+| `buttons` | atribuições atuais dos botões | ⚠️ só com receptor |
+| `bond` | com qual mouse o receptor está pareado | ⚠️ só com receptor |
 
-Descobrir o DPI ativo sem dongle é possível pela cor do LED — `colors` mostra a
-legenda.
+Descobrir o DPI ativo sem o receptor é possível pela cor do LED — `colors`
+mostra a legenda.
 
-## O que o cabo permite
+## Cabo ou receptor
 
-| Operação | Cabo (feature `0x52`) | Dongle 2.4GHz |
+Os dois estão validados em hardware. O receptor é o que consegue ler de volta a
+configuração gravada no mouse.
+
+| Operação | Cabo (feature `0x52`) | Receptor 2.4GHz (feature `0x51`) |
 |---|---|---|
 | Escrever configuração | ✅ | ✅ |
 | Ler configuração | ❌ devolve sempre a identidade | ✅ |
 | Identidade, firmware, bateria | ✅ | ✅ |
 | Até 5 níveis de DPI | ✅ | ✅ |
-| 6 ou mais níveis | ❌ formato estendido é ignorado | não testado |
+| 6 ou mais níveis | ❌ formato estendido é ignorado | ❌ formato longo não tem rota |
+| Taxa de resposta | ❔ não verificado | ❔ não verificado |
+| Leitura do bootloader | a do mouse | a do **próprio receptor** |
+
+O receptor perde o link de configuração em silêncio: o cursor continua
+funcionando enquanto todo comando responde "sem link". Tirar e recolocar o
+receptor é a única recuperação.
 
 Detalhes completos do protocolo em [PROTOCOL.pt-BR.md](PROTOCOL.pt-BR.md): os três canais
 HID, a tabela de 31 opcodes, o formato de cada pacote e os canais que **não**
@@ -88,6 +98,7 @@ funcionam.
 | Hardware | `1.0.0` |
 | Sensor | PAW3395, 50–26000 DPI |
 | Bateria | 500 mAh |
+| Receptor | `0x248A:0xFF30`, módulo `UCFRF001`, fw `e.1.0r-7` |
 | Sistema | macOS 26.6 (arm64) |
 
 Outros modelos Darmoshark que usam o mesmo protocolo podem funcionar, mas não
