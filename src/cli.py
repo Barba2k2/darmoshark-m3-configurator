@@ -20,18 +20,21 @@ class Cli:
             prog="dms",
             description="Configure a Darmoshark M3 (Attack Shark M3) mouse.",
             epilog="Writes work over the cable (feature report 0x52) and over the "
-                   "2.4GHz dongle. Reads marked [dongle] need the receiver: the "
-                   "cable interface always answers with the identity block.",
+                   "2.4GHz receiver (feature report 0x51). Reads marked [receiver] "
+                   "need the receiver: the cable always answers with the identity "
+                   "block instead of the stored configuration.",
         )
         sub = parser.add_subparsers(dest="command", required=True)
 
         sub.add_parser("list", help="list the HID interfaces exposed by the mouse")
         sub.add_parser("capabilities", help="what this model supports (offline)")
         sub.add_parser("colors", help="LED colour legend for DPI and polling rate")
+        sub.add_parser("bond",
+                       help="[receiver] which mouse the receiver is linked to")
         sub.add_parser("battery", help="identity and battery (cable)")
         sub.add_parser("dfu", help="bootloader, firmware and hardware revision (cable)")
-        sub.add_parser("info", help="[dongle] full configuration snapshot")
-        sub.add_parser("buttons", help="[dongle] current button assignments")
+        sub.add_parser("info", help="[receiver] full configuration snapshot")
+        sub.add_parser("buttons", help="[receiver] current button assignments")
         sub.add_parser("reset", help="restore factory defaults")
 
         dpi = sub.add_parser("dpi", help="program the DPI levels")
@@ -80,6 +83,7 @@ class Cli:
             "battery": lambda: Cli._withMouse(Cli._showCableInfo),
             "dfu": lambda: Cli._withMouse(Cli._showDfuInfo),
             "info": lambda: Cli._withMouse(Cli._showBaseInfo),
+            "bond": lambda: Cli._withMouse(Cli._showBondInfo),
             "buttons": lambda: Cli._withMouse(Cli._showButtons),
             "reset": lambda: Cli._withMouse(Cli._resetDefaults),
             "dpi": lambda: Cli._withMouse(Cli._setDpi, args.values, args.active),
@@ -162,6 +166,9 @@ class Cli:
     @staticmethod
     def _showDfuInfo(configurator):
         info = configurator.readDfuInfo()
+        if configurator.device.usesDongleTransport:
+            print("note: this is the receiver's own bootloader, not the mouse's. "
+                  "Read it over the cable to get the mouse.")
         print(f"module   : {info.moduleModel}")
         print(f"firmware : {info.firmwareVersion}")
         print(f"hardware : {info.hardwareVersion}")
@@ -171,13 +178,27 @@ class Cli:
     def _showBaseInfo(configurator):
         info = configurator.readBaseInfo()
         rate = ReportRatePacket.codeToRate(info.reportRate)
+        active = info.dpiLevels[info.activeLevel] if (
+            info.activeLevel < len(info.dpiLevels)) else None
         print(f"profile      : {info.profile}")
         print(f"dpi levels   : {', '.join(str(v) for v in info.dpiLevels)}")
-        print(f"active level : {info.activeLevel}")
+        print(f"active level : {info.activeLevel}"
+              f"{f' ({active} DPI)' if active else ''}")
         print(f"polling rate : {rate if rate else f'code {info.reportRate}'} Hz")
-        print(f"battery      : {info.batteryPercent}%"
-              f"{' (charging)' if info.batteryCharging else ''}")
+        if info.batteryPercent is not None:
+            print(f"battery      : {info.batteryPercent}%"
+                  f"{' (charging)' if info.batteryCharging else ''}")
         print(f"sleep        : {info.sleepMinutes} min")
+        if getattr(info, "debounceMs", None) is not None:
+            print(f"debounce     : {info.debounceMs} ms")
+            print(f"lift-off     : {info.liftOff}")
+        return 0
+
+    @staticmethod
+    def _showBondInfo(configurator):
+        bond = configurator.readBondInfo()
+        print(f"linked mouse : 0x{bond['vendorId']:04X}:0x{bond['productId']:04X}")
+        print(f"link state   : {'up' if bond['linked'] else 'down'}")
         return 0
 
     @staticmethod
