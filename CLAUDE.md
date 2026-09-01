@@ -31,7 +31,7 @@ PYTHONPATH=src .venv/bin/python -m unittest tests.test_packets.DpiPacketTest.tes
 GUI: `PYTHONPATH=src .venv/bin/python src/gui/app.py`
 CLI: `PYTHONPATH=src .venv/bin/python src/cli.py <command>` (`list`, `capabilities`,
 `colors`, `battery`, `dfu`, `dpi`, `use`, `rate`, `debounce`, `lod`, `sleep`,
-`profile`, `button`, `reset`, `info`, `buttons`).
+`profile`, `button`, `reset`, `info`, `buttons`, `bond`).
 
 No linter or type checker is configured.
 
@@ -46,7 +46,8 @@ Three layers, strictly one class per file.
 - `*_packet.py` are pure builders: static methods returning `(reportId, payload)`
   bytes, validating ranges before anything reaches the hardware. They never touch
   a device, which is why the tests can assert byte-identical frames.
-- `*_info.py` are pure decoders for replies (`BaseInfo`, `CableInfo`, `DfuInfo`).
+- `*_info.py` are pure decoders for replies (`BaseInfo`, `CableInfo`, `DfuInfo`,
+  `DongleBaseInfo`).
 - `device.py` (`DarmosharkDevice`) is the only file that talks to `hid`.
 - `mouse_configurator.py` (`MouseConfigurator`) composes builders + device into
   the high-level operations; both CLI and GUI go through it, never around it.
@@ -97,16 +98,16 @@ form (uint16 Hz per level) moves the rate nibble of the snapshot, and the
 nibble's own mapping is unconfirmed. Do not "fix" the builder to the other
 layout without hardware evidence — that swaps one unverified guess for another.
 
-`DarmosharkDevice.usesCableTransport` selects the path;
-`MouseConfigurator._sendAcknowledged` skips ACK checking on cable. A silent
-device on the cable means a *successful* write, not a failure — do not add error
-handling that treats it as one.
+`DarmosharkDevice.usesCableTransport` and `usesDongleTransport` select the path;
+`MouseConfigurator._sendAcknowledged` skips ACK checking on both, since neither
+acknowledges a write. A silent device means a *successful* write, not a failure
+— do not add error handling that treats it as one.
 
 ## Constraints
 
 - Never widen the DPI range or level count past `DarmosharkProtocol` limits — a
   malformed packet can leave the mouse in an inconsistent onboard profile.
-- Reads that need the dongle must fail with a message saying so, not silently
+- Reads that need the receiver must fail with a message saying so, not silently
   return the identity block.
 - `research/` is gitignored vendor bundle scratch; `reference/` holds the public
   vendor JSON definitions and is tracked.
