@@ -5,6 +5,7 @@ from darmoshark.button_packet import ButtonPacket
 from darmoshark.cable_info import CableInfo
 from darmoshark.dfu_info import DfuInfo
 from darmoshark.dms_commands import DmsCommands
+from darmoshark.dongle_base_info import DongleBaseInfo
 from darmoshark.dpi_packet import DpiPacket
 from darmoshark.profile_packet import ProfilePacket
 from darmoshark.protocol import DarmosharkProtocol
@@ -15,8 +16,9 @@ from darmoshark.tuning_packet import TuningPacket
 class MouseConfigurator:
     """Every setting the official configurator can change, over the dms channel.
 
-    Reads that the cable exposes (identity, battery, bootloader) work anywhere.
-    Everything else needs the 2.4GHz config interface.
+    Writes work over either transport. Reading the stored configuration back
+    needs the 2.4GHz receiver -- over the cable every opcode answers with the
+    identity block instead.
     """
 
     def __init__(self, device):
@@ -39,9 +41,37 @@ class MouseConfigurator:
             raise RuntimeError("bootloader did not answer the module-info request")
         return DfuInfo.parse(packets)
 
+    # -- reads that need the 2.4GHz receiver -------------------------------
+
+    def readDongleBaseInfo(self):
+        """Reads the stored configuration back, receiver only."""
+        payload = bytearray(DarmosharkProtocol.donglePayloadSize)
+        payload[0] = DarmosharkProtocol.cmdDongleBaseInfo
+        reply = self.device.requestDongle(bytes(payload))
+        if reply is None:
+            raise RuntimeError("receiver did not answer the configuration read")
+        return DongleBaseInfo.parse(reply)
+
+    def readBondInfo(self):
+        """Identity of the mouse the receiver is linked to, and the link state."""
+        payload = bytearray(DarmosharkProtocol.donglePayloadSize)
+        payload[0] = DmsCommands.getBondInfo
+        reply = self.device.requestDongle(bytes(payload))
+        if reply is None:
+            raise RuntimeError("receiver did not answer the bond request")
+        body = reply[1:]
+        return {
+            "vendorId": body[2] | body[3] << 8,
+            "productId": body[4] | body[5] << 8,
+            "linked": bool(body[6]),
+        }
+
     # -- reads that need the config interface ------------------------------
 
     def readBaseInfo(self):
+        if self.device.usesDongleTransport:
+            return self.readDongleBaseInfo()
+
         payload = bytearray(DarmosharkProtocol.longPayloadSize)
         payload[0] = DmsCommands.getMouseExtInfo
 
@@ -59,7 +89,13 @@ class MouseConfigurator:
 
     def readButton(self, buttonIndex):
         reportId, payload = ButtonPacket.buildRead(buttonIndex)
-        reply = self.device.requestCommand(reportId, payload)
+        if self.device.usesDongleTransport:
+            # The opcode alone does not identify the answer here: every button
+            # shares it, so the index has to be echoed back too.
+            reply = self.device.requestDongle(payload, echoBytes=2)
+            reply = reply[1:] if reply else None
+        else:
+            reply = self.device.requestCommand(reportId, payload)
         if reply is None:
             raise RuntimeError(f"no answer reading button {buttonIndex}")
         return ButtonPacket.parseRead(reply, buttonIndex)
@@ -121,11 +157,12 @@ class MouseConfigurator:
     def _sendAcknowledged(self, reportId, payload, opcode, required=True):
         """Sends a command and checks the 0xE4 acknowledgement frame.
 
-        Only the dongle transport acknowledges. Over the cable the writes are
-        fire-and-forget -- the same way the vendor software issues them -- so
-        there is nothing to verify and a missing reply is not an error.
+        Both hardware transports issue writes fire-and-forget, the same way the
+        vendor software does: the cable stays silent, and the receiver answers
+        only that it queued the command. There is nothing to verify in either
+        case, so a missing reply is not an error.
         """
-        if self.device.usesCableTransport:
+        if self.device.usesCableTransport or self.device.usesDongleTransport:
             self.device.sendCommand(reportId, payload)
             return None
 
