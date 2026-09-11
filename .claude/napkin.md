@@ -27,5 +27,6 @@
   them at once and the second hits macOS exclusive access. Do: run them in
   sequence into files, then diff.
 - 2026-09-11: Frame parity is checked against `tests/oracle/fixtures/
-  python_oracle.json`. Do: regenerate it only with `record_python_oracle.py`, never by
-  hand, and only while the Python still exists.
+  python_oracle.json`. The Python and its recorder are gone (removed after
+  3dea1a0), so the fixture is frozen. Do: edit it by hand only with hardware
+  evidence, and say so in the commit.
