@@ -31,7 +31,7 @@ impl CommandRunner {
       Command::Reset => WriteCommands::reset(&configurator),
       Command::Dpi { values, active } => WriteCommands::dpi(&configurator, values, *active),
       Command::Use { level } => WriteCommands::use_level(&configurator, *level),
-      Command::Rate { values, active } => WriteCommands::rates(&configurator, values, *active),
+      Command::Rate { hertz } => WriteCommands::rate(&configurator, *hertz),
       Command::Debounce { milliseconds } => WriteCommands::debounce(&configurator, *milliseconds),
       Command::Lod { value } => WriteCommands::lift_off(&configurator, *value),
       Command::Sleep { minutes } => WriteCommands::sleep(&configurator, *minutes),

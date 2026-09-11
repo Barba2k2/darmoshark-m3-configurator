@@ -59,16 +59,9 @@ impl WriteCommands {
     ))
   }
 
-  pub fn rates(
-    configurator: &MouseConfigurator,
-    values: &[u32],
-    active: usize,
-  ) -> DarmosharkResult<String> {
-    configurator.write_report_rates(values, active, None)?;
-    Ok(format!(
-      "polling rates set to {} Hz",
-      OfflineCommands::join(values)
-    ))
+  pub fn rate(configurator: &MouseConfigurator, hertz: u32) -> DarmosharkResult<String> {
+    configurator.write_report_rate(hertz)?;
+    Ok(format!("polling rate set to {hertz} Hz"))
   }
 
   pub fn debounce(configurator: &MouseConfigurator, milliseconds: u32) -> DarmosharkResult<String> {

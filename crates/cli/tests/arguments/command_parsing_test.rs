@@ -35,14 +35,12 @@ fn dpi_needs_at_least_one_level() {
 }
 
 #[test]
-fn rate_takes_one_value_per_level() {
+fn rate_takes_a_single_frequency() {
   assert_eq!(
-    parse(&["rate", "1000", "500"]).unwrap(),
-    Command::Rate {
-      values: vec![1000, 500],
-      active: 0
-    }
+    parse(&["rate", "1000"]).unwrap(),
+    Command::Rate { hertz: 1000 }
   );
+  assert!(parse(&["rate", "1000", "500"]).is_err());
 }
 
 #[test]
