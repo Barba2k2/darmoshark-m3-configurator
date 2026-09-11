@@ -11,3 +11,6 @@ research/
 
 # OS
 .DS_Store
+
+# Rust
+target/

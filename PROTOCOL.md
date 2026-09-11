@@ -75,8 +75,12 @@ Reads are what the cable cannot do. The receiver answers on **input report
 from the feature report:
 
 ```
-54 E4 <status> <opcode>
+54 E4 <status> 00
 ```
+
+The byte after the status is where the vendor bundle expects the echoed
+opcode, but this receiver always sends `00` there: the acknowledgement does not
+say which command it belongs to.
 
 | Status | Meaning |
 |---|---|
@@ -85,7 +89,13 @@ from the feature report:
 | 2 | **no live link to the mouse** — unplug and replug the receiver |
 | 4 | busy — same as queued |
 
-Two traps, both of which cost hours:
+A read typically posts `E4 00` then `E4 01` within 10–80 ms. A write posts a
+single `E4 00`, 300–800 ms after it was sent, once the receiver has relayed it
+to the mouse — a read issued before that frame still returns the old value.
+The bond read (opcode 3) posts no acknowledgement at all; its reply is simply
+in the feature report.
+
+Four traps, all of which cost hours:
 
 - **Status 2 does not heal.** Once the receiver loses its link, every command
   answers `2` forever, including the ones that would otherwise work. The
@@ -96,6 +106,14 @@ Two traps, both of which cost hours:
   wrong question. Always check the echoed opcode — and for commands that
   address a slot (buttons, macros) the echoed index too, since every button
   shares one opcode.
+- **Only a ready status opens the buffer.** Two reads of the same opcode echo
+  the same bytes, so the echo cannot tell a fresh reply from the last one.
+  Reading the feature report on status `0` returns the previous snapshot every
+  time; wait for `1`, and resend if it never comes.
+- **Stale acknowledgements wait in the queue.** Since the frame names no
+  command, the `E4 00` a write posts late is indistinguishable from the one the
+  next read posts. Drain input `0x54` before sending, and let a write wait for
+  its own frame before anything reads the setting back.
 
 Reads confirmed on hardware:
 
