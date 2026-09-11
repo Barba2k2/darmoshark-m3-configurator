@@ -1,0 +1,22 @@
+{
+  "source": "generated from the Python CLI, src/cli.py at commit 19b0c5a (removed afterwards)",
+  "capabilities": "model          : Darmoshark M3\ndpi range      : 50-26000\ndefault levels : 400, 800, 1600, 3200, 4800\npolling rates  : 125, 500, 1000 Hz\nlift-off steps : 1=low, 2=high\nbuttons        : 5\nrgb lighting   : no (indicator LED only)\n",
+  "colors": "The indicator LED encodes the active setting. Colours are fixed in\nfirmware -- they are not configurable.\n\nDPI level:\n  level 0    400 DPI   #ff0000  red\n  level 1    800 DPI   #0060ff  blue\n  level 2   1600 DPI   #12ff00  green\n  level 3   3200 DPI   #e218ff  magenta\n  level 4   4800 DPI   #f9e14c  yellow\n\nPolling rate:\n   125 Hz          #ff0000  red\n   500 Hz          #0060ff  blue\n  1000 Hz          #12ff00  green\n",
+  "snapshots": [
+    {
+      "kind": "dongle",
+      "input": "510700131303900120034006800cc0123505080000",
+      "output": "profile      : 0\ndpi levels   : 400, 800, 1600, 3200, 4800\nactive level : 3 (3200 DPI)\npolling rate : 500 Hz\nsleep        : 0 min\ndebounce     : 8 ms\nlift-off     : 1\n"
+    },
+    {
+      "kind": "dongle",
+      "input": "510700137303900120034006800cc0123505080000",
+      "output": "profile      : 0\ndpi levels   : 400, 800, 1600, 3200, 4800\nactive level : 3 (3200 DPI)\npolling rate : code 7 Hz\nsleep        : 0 min\ndebounce     : 8 ms\nlift-off     : 1\n"
+    },
+    {
+      "kind": "config",
+      "input": "101112211415161718191a1b1c1d1e1f052122c02425262728292a2b2c2d2e2f",
+      "output": "profile      : 17\ndpi levels   : 5653, 6167, 6681, 7195, 7709\nactive level : 1 (6167 DPI)\npolling rate : 1000 Hz\nbattery      : 64% (charging)\nsleep        : 34 min\n"
+    }
+  ]
+}
