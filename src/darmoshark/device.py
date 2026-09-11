@@ -156,29 +156,64 @@ class DarmosharkDevice:
 
         The receiver answers on input report 0x54 with 0xE4 <status>: pending
         and busy both mean "ask again in a moment", ready means the reply is
-        sitting in the feature report. The reply buffer keeps the previous
-        answer until the new one lands, so the echoed leading bytes are what
-        prove the data belongs to this request -- one byte is the opcode, and
-        commands addressing a slot (a button, a macro) need two.
+        sitting in the feature report. The ack carries no opcode, so frames left
+        in the queue by an earlier command -- a write posts its pending ack
+        about 600 ms later -- are drained before sending.
+
+        The reply buffer keeps the previous answer until the new one lands, so
+        the echoed leading bytes are what prove the data belongs to this request
+        -- one byte is the opcode, and commands addressing a slot (a button, a
+        macro) need two. Two reads of the same opcode echo the same bytes, which
+        is why a request left pending is sent again rather than read. Some
+        commands (the bond read) post no ack at all; their reply is read as is.
         """
         echo = bytes(payload[:echoBytes])
         for attempt in range(attempts):
+            self.handle.set_nonblocking(1)
+            while self.handle.read(64):
+                pass
             self.sendDongle(payload)
             status = self._awaitDongleAck()
             if status == DarmosharkProtocol.ackStatusLinkDown:
-                raise RuntimeError(
-                    "the receiver reports no live link to the mouse. Set the switch "
-                    "to 2.4G, then unplug and replug the receiver -- a dropped link "
-                    "does not recover on its own.")
-            reply = self._readDongleFeature(payload)
-            if reply is not None and reply[1:1 + echoBytes] == echo:
-                return reply
+                raise RuntimeError(DarmosharkDevice.linkDownMessage)
+            if status in (None, DarmosharkProtocol.ackStatusReady):
+                reply = self._readDongleFeature(payload)
+                if reply is not None and reply[1:1 + echoBytes] == echo:
+                    return reply
             if attempt + 1 < attempts:
                 time.sleep(0.3)
         return None
 
+    linkDownMessage = (
+        "the receiver reports no live link to the mouse. Set the switch to 2.4G, "
+        "then unplug and replug the receiver -- a dropped link does not recover "
+        "on its own.")
+
     def _awaitDongleAck(self, timeoutSeconds=0.6):
-        """Returns the status byte of the 0xE4 frame, or None if none arrives."""
+        """Waits for a settled 0xE4 status -- ready or link down -- skipping the
+        pending and busy frames. On timeout, the last unsettled status seen, or
+        None when no ack arrived at all."""
+        settled = (DarmosharkProtocol.ackStatusReady,
+                   DarmosharkProtocol.ackStatusLinkDown)
+        self.handle.set_nonblocking(1)
+        deadline = time.monotonic() + timeoutSeconds
+        last = None
+        while time.monotonic() < deadline:
+            frame = self.handle.read(64)
+            if not frame:
+                time.sleep(0.005)
+                continue
+            frame = bytes(frame)
+            if len(frame) > 2 and frame[1] == DmsCommands.ackOpcode:
+                if frame[2] in settled:
+                    return frame[2]
+                last = frame[2]
+        return last
+
+    def _awaitDongleWrite(self, timeoutSeconds=1.5):
+        """The receiver relays a write asynchronously and posts one 0xE4 frame
+        when it went through, 300-800 ms later; a read before that still sees
+        the old value. Silence is not an error, a dead link is."""
         self.handle.set_nonblocking(1)
         deadline = time.monotonic() + timeoutSeconds
         while time.monotonic() < deadline:
@@ -188,8 +223,9 @@ class DarmosharkDevice:
                 continue
             frame = bytes(frame)
             if len(frame) > 2 and frame[1] == DmsCommands.ackOpcode:
-                return frame[2]
-        return None
+                if frame[2] == DarmosharkProtocol.ackStatusLinkDown:
+                    raise RuntimeError(DarmosharkDevice.linkDownMessage)
+                return
 
     def _readDongleFeature(self, payload):
         featureId, size = DarmosharkDevice.dongleChannel(payload)
@@ -206,7 +242,8 @@ class DarmosharkDevice:
         the identical bytes as feature report 0x52, zero padded to 64 bytes.
         """
         if self.usesDongleTransport:
-            return self.sendDongle(payload)
+            self.sendDongle(payload)
+            return self._awaitDongleWrite()
         if not self.usesCableTransport:
             return self.send(reportId, payload)
 
