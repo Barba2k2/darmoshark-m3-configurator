@@ -93,7 +93,9 @@ export const useMouseStore = create<MouseState>()((set, get) => {
       try {
         device = await MouseService.readDeviceState();
       } catch (error) {
-        set({ device: null, connection: "disconnected", status: "error", errorDetail: describeError(error) });
+        // A failed read is not a missing mouse: it may be asleep or busy. The
+        // last known state stays; only `null` below means nothing is plugged.
+        set({ status: "error", errorDetail: describeError(error) });
         return;
       }
       if (device === null) {
