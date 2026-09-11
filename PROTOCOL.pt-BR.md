@@ -24,22 +24,118 @@ O mouse expõe interfaces diferentes conforme a conexão.
 | Interface | Usage page | Função |
 |---|---|---|
 | 0 / 1 | `0x01`, `0x0C` | mouse / teclado / consumer (genéricas) |
-| 2 | `0x8C` | **DFU apenas** — reports `0xB1`/`0xB2`, pacotes `0xAA 0x55/0x56 len ~len ...` |
-| dongle 2.4GHz | `0xFF0A` / `0xFFC1` | **canal de configuração** — reports `0xB3`/`0xB5` |
+| 2 | `0x8C` | DFU **e** configuração pelo cabo — ver abaixo |
+| receptor, iface 1 | `0x8C` | DFU **e** configuração por 2.4GHz — mesmo descriptor |
 
 > **Correção (validada em hardware):** a interface do cabo NÃO é só DFU. Os
 > mesmos payloads do `dms` são aceitos como **feature report `0x52`** nela, e
 > aplicam de verdade. O engano inicial veio de testar apenas leitura: `setDpi`
 > é fire-and-forget no protocolo original, então silêncio é o comportamento
 > normal de uma escrita bem-sucedida.
->
-> | Operação | Cabo (`0x8C`, feature `0x52`) | Dongle (`0xFFC1`, `0xB3`/`0xB5`) |
-> |---|---|---|
-> | Escrita de config | ✅ funciona | ✅ funciona |
-> | Leitura de config | ❌ devolve sempre o bloco de identidade | ✅ funciona |
->
-> Pelo cabo o endpoint USB já opera a 1000 Hz (`ReportInterval = 1000 µs`), então
-> `setReportRate` só tem efeito observável nos modos sem fio.
+
+O receptor 2.4GHz (`0x248A:0xFF30`, product string `RF Dongle`) expõe três
+interfaces e **nenhuma usage page vendor própria**: a interface de config
+carrega exatamente o mesmo descriptor `0x8C` do mouse pelo cabo. As páginas
+`0xFF0A` / `0xFFC1` e os output reports `0xB3` / `0xB5` pertencem a outros
+modelos do bundle — neste hardware não existem em lugar nenhum, e escrever
+neles não chega a nada.
+
+Report ids desse descriptor, idênticos nas duas interfaces:
+
+| Report | Tipo | Tamanho | Função |
+|---|---|---|---|
+| `0xB1` / `0xB2` | input / output | 32 B | DFU |
+| `0x51` | feature | 20 B | identidade pelo cabo, **config pelo receptor** |
+| `0x52` | feature | 64 B | config pelo cabo, comandos longos pelo receptor |
+| `0x53` | feature | 1000 B | sem uso aqui |
+| `0x54` | input | 20 B | confirmações vindas do receptor |
+
+Dois transportes carregam os mesmos payloads:
+
+| Operação | Cabo (feature `0x52`) | Receptor (feature `0x51`) |
+|---|---|---|
+| Escrita de config | ✅ funciona | ✅ funciona |
+| Leitura de config | ❌ devolve sempre o bloco de identidade | ✅ funciona |
+| Confirmação | nenhuma, escrita silenciosa | `0xE4` no input `0x54` |
+| Níveis de DPI | 5 (só o formato curto) | 5 |
+| Leitura do bootloader | a do mouse | a do **próprio receptor** |
+
+Pelo cabo o endpoint USB já opera a 1000 Hz (`ReportInterval = 1000 µs`), então
+`setReportRate` só tem efeito observável nos modos sem fio.
+
+## Canal do receptor 2.4GHz (feature `0x51`)
+
+Os comandos são os mesmos payloads de 20 bytes, enviados como feature report
+`0x51` (preenchidos com zeros); o que passar disso vai no feature `0x52`, de 64
+bytes. As escritas são fire-and-forget, igual ao cabo.
+
+A leitura é o que o cabo não faz. O receptor responde no **input report `0x54`**
+com um frame de confirmação, e só então a resposta é buscada no feature report:
+
+```
+54 E4 <status> <opcode>
+```
+
+| Status | Significado |
+|---|---|
+| 0 | enfileirado — reenviar o mesmo comando daqui a pouco |
+| 1 | pronto — a resposta está esperando no feature report |
+| 2 | **sem link com o mouse** — tirar e recolocar o receptor |
+| 4 | ocupado — igual a enfileirado |
+
+Duas armadilhas, ambas caras:
+
+- **Status 2 não se recupera sozinho.** Perdido o link, todo comando responde
+  `2` para sempre, inclusive os que funcionariam. O cursor continua se mexendo
+  o tempo todo, porque a entrada HID trafega por caminho diferente do canal de
+  configuração. Só o replug do receptor traz de volta.
+- **O buffer do feature fica velho até a resposta nova chegar.** Ler cedo
+  demais devolve a resposta *anterior*, que parece válida mas é de outra
+  pergunta. Sempre conferir o eco do opcode — e, nos comandos que endereçam um
+  slot (botões, macros), também o eco do índice, já que todos os botões
+  compartilham o mesmo opcode.
+
+Leituras confirmadas em hardware:
+
+| Opcode | Devolve |
+|---|---|
+| 3 | vínculo: VID, PID e estado do link do mouse pareado |
+| 4 | string de firmware (`2.0.9r`) |
+| 5 | nome do produto (`M3 Mouse`) |
+| 6 | versão de protocolo, work mode, bateria |
+| 7 | **o snapshot de configuração** |
+
+### Snapshot de configuração — opcode `0x07`
+
+Offsets contados a partir do eco do opcode, depois de tirar o report id. É o
+`getBaseInfo` do contract `M` — o opcode `0x06` do `dms`, usado pelo cabo, não
+responde nada aqui.
+
+| Offset | Campo |
+|---|---|
+| 0 | eco do opcode (`0x07`) |
+| 1 | perfil onboard ativo |
+| 2 / 3 / 4 | slot usb / 2.4GHz / bluetooth — nibble baixo é o índice de DPI ativo, nibble alto o índice de report rate |
+| 5..14 | cinco uint16 little-endian de DPI |
+| 15 | bits do sensor — `[1:0]` lift-off, `[2]` wave, `[3]` line, `[4]` motion, `[6]` scroll, `[7]` eSports |
+| 16 | quantidade de níveis de DPI habilitados |
+| 17 | debounce do clique, em milissegundos |
+| 18 | timer de sono, em minutos |
+
+Exemplo lido de um M3 com firmware `2.0.9r`:
+
+```
+51 07 00 13 13 03 90 01 20 03 40 06 80 0c c0 12 35 05 08 00 00
+```
+
+perfil 0 · nível ativo 3 · índice de rate 1 · 400/800/1600/3200/4800 ·
+debounce 8 ms · lift-off 1.
+
+> `setReportRate` continua **não verificado**. Nem o nosso pacote (um byte de
+> índice por nível) nem a forma `M` do bundle (uint16 little-endian de Hz por
+> nível) mexem no nibble de rate desse snapshot. O mapeamento do próprio nibble
+> também não está confirmado — é o único ajuste ainda em aberto nos dois
+> transportes.
 
 ## Comandos
 

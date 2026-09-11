@@ -7,6 +7,7 @@ logic, so a passing test means our frame is byte-identical to the vendor's.
 import unittest
 
 from darmoshark.button_packet import ButtonPacket
+from darmoshark.dongle_base_info import DongleBaseInfo
 from darmoshark.dpi_packet import DpiPacket
 from darmoshark.profile_packet import ProfilePacket
 from darmoshark.report_rate_packet import ReportRatePacket
@@ -170,3 +171,44 @@ class DeviceProfileTest(unittest.TestCase):
         from darmoshark.report_rate_packet import ReportRatePacket
         declared = tuple(hz for hz, _ in self.profile.reportRates)
         self.assertEqual(declared, ReportRatePacket.supportedRates)
+
+
+class DongleBaseInfoTest(unittest.TestCase):
+    """Bytes captured from a real receiver (M3, fw 2.0.9r) over 2.4GHz."""
+
+    snapshot = bytes.fromhex("510700131303900120034006800cc0123505080000")
+
+    def test_decodes_the_captured_snapshot(self):
+        info = DongleBaseInfo.parse(self.snapshot)
+        self.assertEqual(info.profile, 0)
+        self.assertEqual(info.dpiLevels, (400, 800, 1600, 3200, 4800))
+        self.assertEqual(info.activeLevel, 3)
+        self.assertEqual(info.reportRate, 1)
+        self.assertEqual(info.debounceMs, 8)
+        self.assertEqual(info.sleepMinutes, 0)
+        self.assertEqual(info.liftOff, 1)
+
+    def test_battery_is_absent_from_this_reply(self):
+        self.assertIsNone(DongleBaseInfo.parse(self.snapshot).batteryPercent)
+
+    def test_rejects_a_reply_from_another_opcode(self):
+        other = bytearray(self.snapshot)
+        other[1] = 0x06
+        with self.assertRaises(ValueError):
+            DongleBaseInfo.parse(bytes(other))
+
+    def test_rejects_an_implausible_level_count(self):
+        broken = bytearray(self.snapshot)
+        broken[17] = 9
+        with self.assertRaises(ValueError):
+            DongleBaseInfo.parse(bytes(broken))
+
+    def test_rejects_more_levels_than_the_reply_carries(self):
+        truncated = bytearray(self.snapshot)
+        truncated[17] = 8
+        with self.assertRaises(ValueError):
+            DongleBaseInfo.parse(bytes(truncated))
+
+
+if __name__ == "__main__":
+    unittest.main()

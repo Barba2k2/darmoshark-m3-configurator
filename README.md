@@ -57,21 +57,31 @@ PYTHONPATH=src .venv/bin/python src/cli.py <command>
 | `profile 0` | switch the onboard profile | ✅ |
 | `button 3 dpi` | remap a button | ✅ |
 | `reset` | restore factory defaults | ✅ |
-| `info` | full stored configuration | ⚠️ dongle only |
-| `buttons` | current button assignments | ⚠️ dongle only |
+| `info` | full stored configuration | ⚠️ receiver only |
+| `buttons` | current button assignments | ⚠️ receiver only |
+| `bond` | which mouse the receiver is linked to | ⚠️ receiver only |
 
-Finding the active DPI without a dongle is possible through the LED colour —
-`colors` prints the legend.
+Finding the active DPI without the receiver is possible through the LED colour
+— `colors` prints the legend.
 
-## What the cable allows
+## Cable or receiver
 
-| Operation | Cable (feature `0x52`) | 2.4GHz dongle |
+Both are validated on hardware. The receiver is the one that can read the
+mouse's stored configuration back.
+
+| Operation | Cable (feature `0x52`) | 2.4GHz receiver (feature `0x51`) |
 |---|---|---|
 | Write configuration | ✅ | ✅ |
 | Read configuration | ❌ always answers with identity | ✅ |
 | Identity, firmware, battery | ✅ | ✅ |
 | Up to 5 DPI levels | ✅ | ✅ |
-| 6 or more levels | ❌ extended format is ignored | untested |
+| 6 or more levels | ❌ extended format is ignored | ❌ no route for the long form |
+| Polling rate | ❔ unverified | ❔ unverified |
+| Bootloader read | the mouse's | the **receiver's** own |
+
+The receiver drops its config link silently: the cursor keeps working while
+every command answers "no link". Unplugging and replugging it is the only
+recovery.
 
 Full protocol details in [PROTOCOL.md](PROTOCOL.md): the three HID channels,
 the 31 opcode table, every packet layout, and the channels that do **not**
@@ -88,6 +98,7 @@ work.
 | Hardware | `1.0.0` |
 | Sensor | PAW3395, 50–26000 DPI |
 | Battery | 500 mAh |
+| Receiver | `0x248A:0xFF30`, module `UCFRF001`, fw `e.1.0r-7` |
 | System | macOS 26.6 (arm64) |
 
 Other Darmoshark models sharing this protocol may work, but were not tested.
