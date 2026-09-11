@@ -18,6 +18,13 @@ through a CLI and a native window, working offline.
 
 ## Install
 
+The command line is Rust; the graphical interface is still Python while it is
+being ported to Tauri.
+
+```bash
+cargo build --release -p darmoshark-cli
+```
+
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
@@ -38,7 +45,7 @@ sleep timer.
 ### Command line
 
 ```bash
-PYTHONPATH=src .venv/bin/python src/cli.py <command>
+target/release/dms <command>
 ```
 
 | Command | Description | Cable |
@@ -106,18 +113,27 @@ Other Darmoshark models sharing this protocol may work, but were not tested.
 ## Layout
 
 ```
-src/darmoshark/    protocol, packet builders, decoders, HID transport
+crates/darmoshark/ protocol, packet builders, decoders, HID transport (Rust)
+crates/cli/        `dms`, the command line interface
+src/darmoshark/    the same library in Python, kept until the GUI is ported
 src/gui/           PySide6 interface (one widget per file)
-src/cli.py         command line interface
-tests/             packet encoding tests
+tests/             Python packet encoding tests
 reference/         public vendor definitions for this model
 ```
 
 ## Tests
 
 ```bash
+cargo test
+```
+
+```bash
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests
 ```
+
+With the mouse or receiver plugged in, `DARMOSHARK_HARDWARE=1 cargo test --test
+hardware -- --test-threads=1` also exercises the real transport; each write is
+read back and then restored.
 
 The tests verify that the generated packets are byte-identical to the ones the
 vendor software builds, plus the range validations.

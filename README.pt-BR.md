@@ -18,6 +18,13 @@ ajustes em uma CLI e uma janela nativa, funcionando offline.
 
 ## Instalação
 
+A linha de comando é em Rust; a interface gráfica ainda é Python enquanto é
+portada para Tauri.
+
+```bash
+cargo build --release -p darmoshark-cli
+```
+
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
@@ -38,7 +45,7 @@ temporizador de suspensão.
 ### Linha de comando
 
 ```bash
-PYTHONPATH=src .venv/bin/python src/cli.py <comando>
+target/release/dms <comando>
 ```
 
 | Comando | Descrição | Cabo |
@@ -107,18 +114,27 @@ foram testados.
 ## Estrutura
 
 ```
-src/darmoshark/    protocolo, montagem de pacotes, decodificadores, transporte HID
+crates/darmoshark/ protocolo, montagem de pacotes, decodificadores, transporte HID (Rust)
+crates/cli/        `dms`, a interface de linha de comando
+src/darmoshark/    a mesma biblioteca em Python, mantida até a GUI ser portada
 src/gui/           interface PySide6 (um widget por arquivo)
-src/cli.py         interface de linha de comando
-tests/             testes de codificação dos pacotes
+tests/             testes Python de codificação dos pacotes
 reference/         definições públicas do fabricante para este modelo
 ```
 
 ## Testes
 
 ```bash
+cargo test
+```
+
+```bash
 PYTHONPATH=src .venv/bin/python -m unittest discover -s tests
 ```
+
+Com o mouse ou o receptor conectado, `DARMOSHARK_HARDWARE=1 cargo test --test
+hardware -- --test-threads=1` também exercita o transporte real; cada escrita é
+lida de volta e depois restaurada.
 
 Os testes verificam que os pacotes gerados são idênticos, byte a byte, aos que
 o software oficial monta, além das validações de faixa.
