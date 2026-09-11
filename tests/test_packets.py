@@ -49,14 +49,11 @@ class DpiPacketTest(unittest.TestCase):
 
 class ReportRatePacketTest(unittest.TestCase):
 
-    def test_encodes_rate_codes(self):
-        codes = [ReportRatePacket.rateToCode(hz) for hz in (1000, 1000, 500)]
-        reportId, payload = ReportRatePacket.build(codes, 1)
+    def test_encodes_the_rate_index_twice(self):
+        reportId, payload = ReportRatePacket.build(1000)
         self.assertEqual(reportId, 0xB5)
-        self.assertEqual(payload[0], 65)
-        self.assertEqual(tuple(payload[1:3]), (1, 1))
-        self.assertEqual(tuple(payload[3:6]), (2, 2, 1))
-        self.assertEqual(payload[9], 3)
+        self.assertEqual(tuple(payload[0:3]), (65, 2, 2))
+        self.assertFalse(any(payload[3:]))
 
     def test_rate_code_round_trip(self):
         for hz in ReportRatePacket.supportedRates:

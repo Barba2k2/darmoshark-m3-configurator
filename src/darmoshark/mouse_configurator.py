@@ -117,9 +117,8 @@ class MouseConfigurator:
         self.writeDpiLevels(info.dpiLevels, levelIndex, len(info.dpiLevels))
         return info
 
-    def writeReportRates(self, hertzValues, activeLevel, enabledLevels=None):
-        codes = [ReportRatePacket.rateToCode(v) for v in hertzValues]
-        reportId, payload = ReportRatePacket.build(codes, activeLevel, enabledLevels)
+    def writeReportRate(self, hertz):
+        reportId, payload = ReportRatePacket.build(hertz)
         self._sendAcknowledged(reportId, payload, DmsCommands.setReportRate)
 
     def writeDebounce(self, milliseconds):
