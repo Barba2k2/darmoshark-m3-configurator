@@ -1,5 +1,5 @@
 {
-  "source": "generated from the Python implementation (src/darmoshark)",
+  "source": "generated from the Python implementation, src/darmoshark at commit 3dea1a0 (removed afterwards)",
   "frames": [
     {
       "builder": "dpi",

@@ -119,8 +119,6 @@ foram testados.
 crates/darmoshark/ protocolo, montagem de pacotes, decodificadores, transporte HID (Rust)
 crates/cli/        `dms`, a interface de linha de comando
 app/               janela Tauri: React + Zustand em src/, comandos em src-tauri/
-src/darmoshark/    a mesma biblioteca em Python, mantida como oráculo de paridade
-tests/             testes Python de codificação dos pacotes
 reference/         definições públicas do fabricante para este modelo
 ```
 
@@ -132,10 +130,6 @@ cargo test
 
 ```bash
 cd app && pnpm typecheck && pnpm lint && pnpm test
-```
-
-```bash
-PYTHONPATH=src .venv/bin/python -m unittest discover -s tests
 ```
 
 Com o mouse ou o receptor conectado, `DARMOSHARK_HARDWARE=1 cargo test --test

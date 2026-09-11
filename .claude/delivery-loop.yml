@@ -1,5 +1,5 @@
 # Delivery loop manifest for the Darmoshark M3 configurator.
-stack: rust (crates/, app/src-tauri) + react (app/src) + python oracle (src/, until step 4)
+stack: rust (crates/, app/src-tauri) + react (app/src)
 tasks:
   - conversation (no backlog file yet)
 context:
@@ -10,7 +10,6 @@ gate:
   - cargo fmt --all --check
   - cargo clippy --all-targets -- -D warnings
   - cargo test
-  - PYTHONPATH=src .venv/bin/python -m unittest discover -s tests
   - cd app && pnpm typecheck && pnpm lint && pnpm test
 service:
   - DARMOSHARK_HARDWARE=1 cargo test --test hardware -- --test-threads=1 --nocapture

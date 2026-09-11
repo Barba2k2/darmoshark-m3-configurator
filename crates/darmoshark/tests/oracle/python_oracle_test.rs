@@ -1,7 +1,8 @@
 //! Byte-for-byte parity with the Python implementation this crate replaces.
 //!
 //! `fixtures/python_oracle.json` was recorded by running the Python builders
-//! and decoders over the same inputs. The Python frames are themselves checked
+//! and decoders over the same inputs, at commit 3dea1a0, before the Python was
+//! removed. It can no longer be regenerated. The Python frames are themselves checked
 //! against the vendor bundle, so matching them keeps the Rust frames identical
 //! to what the official configurator sends.
 
