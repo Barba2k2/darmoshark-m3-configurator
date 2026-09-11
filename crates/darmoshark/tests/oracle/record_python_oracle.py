@@ -37,8 +37,8 @@ for values, level, enabled in (
         ([1234, 25999, 51], 2, 2)):
     frame("dpi", [values, level, enabled], DpiPacket.build(values, level, enabled))
 
-for codes, level, enabled in (([2, 2, 1], 1, None), ([0] * 6, 5, 3), ([255], 0, None)):
-    frame("rate", [codes, level, enabled], ReportRatePacket.build(codes, level, enabled))
+for hertz in ReportRatePacket.supportedRates:
+    frame("rate", [hertz], ReportRatePacket.build(hertz))
 
 for ms in (0, 8, 20):
     frame("debounce", [ms], TuningPacket.buildDebounce(ms))

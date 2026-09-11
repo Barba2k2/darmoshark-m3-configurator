@@ -8,6 +8,7 @@ use std::sync::Mutex;
 
 use darmoshark::configurator::mouse_configurator::MouseConfigurator;
 use darmoshark::packets::button_packet::ButtonPacket;
+use darmoshark::packets::report_rate_packet::ReportRatePacket;
 use darmoshark::packets::sensor_toggles::SensorToggles;
 use darmoshark::protocol::darmoshark_protocol::DarmosharkProtocol;
 use darmoshark::replies::base_snapshot::BaseSnapshot;
@@ -210,4 +211,25 @@ fn the_receiver_refuses_the_sleep_timer() {
     return;
   };
   assert!(configurator.write_sleep_timer(5).is_err());
+}
+
+#[test]
+fn changes_the_polling_rate_and_restores_it() {
+  let _turn = hardware.lock().unwrap_or_else(|poison| poison.into_inner());
+  let Some(configurator) = receiver() else {
+    return;
+  };
+  let rate =
+    |configurator: &MouseConfigurator| configurator.read_dongle_base_info().unwrap().report_rate;
+  let original = rate(&configurator);
+  let original_hertz =
+    ReportRatePacket::code_to_rate(original).expect("stored rate outside the profile");
+  let other_hertz = if original_hertz == 1000 { 125 } else { 1000 };
+  configurator.write_report_rate(other_hertz).unwrap();
+  let changed = rate(&configurator);
+  configurator.write_report_rate(original_hertz).unwrap();
+  let restored = rate(&configurator);
+
+  assert_eq!(ReportRatePacket::code_to_rate(changed), Some(other_hertz));
+  assert_eq!(restored, original);
 }
