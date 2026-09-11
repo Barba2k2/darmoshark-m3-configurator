@@ -8,9 +8,6 @@ use crate::commands::offline_commands::OfflineCommands;
 pub struct WriteCommands;
 
 impl WriteCommands {
-  /// Vendor defaults for the sensor toggles that ride along with lift-off.
-  pub const sensorDefaults: [u8; 5] = [1, 2, 1, 1, 1];
-
   pub fn reset(configurator: &MouseConfigurator) -> DarmosharkResult<String> {
     configurator.restore_factory_defaults()?;
     Ok("factory defaults restored".into())
@@ -80,9 +77,15 @@ impl WriteCommands {
   }
 
   pub fn lift_off(configurator: &MouseConfigurator, value: u8) -> DarmosharkResult<String> {
-    let [wave, line, motion, scroll, e_sports] = Self::sensorDefaults;
-    configurator.write_sensor_settings(value, wave, line, motion, scroll, e_sports)?;
-    Ok(format!("lift-off distance set to {value}"))
+    configurator.write_lift_off(value)?;
+    if configurator.device().uses_dongle_transport() {
+      return Ok(format!("lift-off distance set to {value}"));
+    }
+    Ok(format!(
+      "lift-off distance set to {value}\nnote: the sensor switches could not be read \
+       back over the cable, so they were reset to the vendor defaults (wave and motion \
+       on, line, scroll and eSports off)."
+    ))
   }
 
   pub fn sleep(configurator: &MouseConfigurator, minutes: u32) -> DarmosharkResult<String> {

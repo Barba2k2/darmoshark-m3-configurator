@@ -4,6 +4,7 @@ use crate::packets::dpi_packet::DpiPacket;
 use crate::packets::packet::Packet;
 use crate::packets::profile_packet::ProfilePacket;
 use crate::packets::report_rate_packet::ReportRatePacket;
+use crate::packets::sensor_toggles::SensorToggles;
 use crate::packets::sleep_mode::SleepMode;
 use crate::packets::tuning_packet::TuningPacket;
 use crate::protocol::darmoshark_protocol::DarmosharkProtocol;
@@ -185,14 +186,25 @@ impl MouseConfigurator {
   pub fn write_sensor_settings(
     &self,
     lift_off: u8,
-    wave: u8,
-    line: u8,
-    motion: u8,
-    scroll: u8,
-    e_sports: u8,
+    toggles: &SensorToggles,
   ) -> DarmosharkResult<()> {
+    let [wave, line, motion, scroll, e_sports] = toggles.packet_values();
     let packet = TuningPacket::build_sensor(lift_off, wave, line, motion, scroll, e_sports)?;
     self.send_acknowledged(&packet, DmsCommands::setSensorLiftCutoff)
+  }
+
+  /// Changes the lift-off distance alone. Its packet also carries the sensor
+  /// switches, so over the receiver the stored ones are read and sent back
+  /// unchanged. The cable cannot read them: there they are reset to the vendor
+  /// defaults, and the returned toggles say which ones were written.
+  pub fn write_lift_off(&self, lift_off: u8) -> DarmosharkResult<SensorToggles> {
+    let toggles = if self.device.uses_dongle_transport() {
+      self.read_dongle_base_info()?.sensor_toggles()
+    } else {
+      SensorToggles::vendorDefaults
+    };
+    self.write_sensor_settings(lift_off, &toggles)?;
+    Ok(toggles)
   }
 
   pub fn write_scroll_settings(&self, speed: u8, inertia: u8, spl: u8) -> DarmosharkResult<()> {
@@ -200,7 +212,18 @@ impl MouseConfigurator {
     self.send_acknowledged(&packet, DmsCommands::setScroll)
   }
 
+  /// Sets the idle sleep timer, cable only. The receiver contract in the
+  /// vendor bundle never sends opcode 10 -- its sleep field is read-only -- and
+  /// on hardware a write through the receiver leaves the snapshot unchanged
+  /// while a `get` never turns ready.
   pub fn write_sleep_timer(&self, minutes: u32) -> DarmosharkResult<()> {
+    if self.device.uses_dongle_transport() {
+      return Err(DarmosharkError::Device(
+        "the receiver does not relay the sleep timer; the vendor software sets it \
+         only over the cable. Connect the charging cable and try again."
+          .into(),
+      ));
+    }
     let packet = TuningPacket::build_sleep(minutes, SleepMode::Set)?;
     self.send_acknowledged(&packet, DmsCommands::deviceTime)
   }

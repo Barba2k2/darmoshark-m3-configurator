@@ -137,10 +137,10 @@ cable answers nothing here.
 | 1 | active onboard profile |
 | 2 / 3 / 4 | usb / 2.4GHz / bluetooth slot — low nibble active dpi index, high nibble report-rate index |
 | 5..14 | five little-endian uint16 dpi values |
-| 15 | sensor bits — `[1:0]` lift-off, `[2]` wave, `[3]` line, `[4]` motion, `[6]` scroll, `[7]` eSports |
+| 15 | sensor bits, 1 = on — `[1:0]` lift-off, `[2]` wave, `[3]` line, `[4]` motion, `[6]` scroll, `[7]` eSports; `[5]` is set on the M3 and maps to nothing known |
 | 16 | number of enabled dpi levels |
 | 17 | click debounce, in milliseconds |
-| 18 | sleep timer, in minutes |
+| 18 | sleep timer, in minutes (read-only here, see opcode 10) |
 
 Example, read from an M3 on firmware `2.0.9r`:
 
@@ -318,14 +318,14 @@ success.
 | 4 | `getDeviceString` | 0xB3 | device string |
 | 5 | `getMouseInfo` | 0xB5 | basic info |
 | 6 | `getMouseExtInfo` | 0xB3 | **full configuration snapshot** |
-| 10 | `deviceTime` | 0xB5 | sleep timer — `[1]` 1=set 2=get, `[2]` minutes |
+| 10 | `deviceTime` | 0xB5 | sleep timer — `[1]` 1=set 2=get, `[2]` minutes. Cable only: the receiver contract never sends it, a write through the receiver leaves snapshot byte 18 unchanged, and a `get` never turns ready |
 | 11 | `pairButton` | 0xB5 | pairing |
 | 14 | `profileSwitch` | 0xB5 | profile switch — `[1]` index |
 | 15 | `driverConfigRecovery` | 0xB5 | reset; `[1]=63` = factory defaults |
 | 35 / 36 | `get/setLightEffectParam` | 0xB5 | lighting |
 | 64 | `setDpi` | 0xB5 | DPI, up to 5 levels |
 | 65 | `setReportRate` | 0xB5 | `[1..2]` level, `[3..8]` codes, `[9]` levels |
-| 66 | `setSensorLiftCutoff` | 0xB5 | `[1]` LOD, `[2]` wave, `[3]` line, `[4]` motion, `[6]` scroll, `[7]` eSports |
+| 66 | `setSensorLiftCutoff` | 0xB5 | `[1]` LOD, `[2]` wave, `[3]` line, `[4]` motion, `[6]` scroll, `[7]` eSports. wave/line/motion: 1 = on, 2 = off; scroll/eSports: 2 = on, 1 = off (confirmed one switch at a time against snapshot byte 15). Every write sets all five, so change lift-off by resending the stored switches |
 | 67 | `setButtonDebounce` | 0xB5 | `[1]` ms |
 | 68 | `setDpiExtended` | 0xB3 | DPI, more than 5 levels |
 | 69 | `setScroll` | 0xB5 | `[1]` speed, `[2]` inertia, `[3]` spl |

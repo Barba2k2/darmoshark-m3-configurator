@@ -132,8 +132,11 @@ Still unverified after the receiver work: `setReportRate`. Neither
 form (uint16 Hz per level) moves the rate nibble of the snapshot, and the
 nibble's own mapping is unconfirmed. Do not "fix" the builder to the other
 layout without hardware evidence — that swaps one unverified guess for another.
-The sleep timer is in the same state: after `sleep 5` (opcode 10, set) the
-snapshot's byte 18 still reads `0`, in both implementations.
+The sleep timer is cable only: the vendor's receiver contract never sends
+opcode 10, so `write_sleep_timer` refuses over the receiver. Lift-off shares
+its packet with five sensor switches with mixed encodings (`SensorToggles`);
+`write_lift_off` resends the stored ones over the receiver instead of the
+vendor defaults.
 
 `DarmosharkDevice.usesCableTransport` and `usesDongleTransport` select the path;
 `MouseConfigurator._sendAcknowledged` skips ACK checking on both, since neither

@@ -10,6 +10,12 @@
 - 2026-09-11: Same-value write + read-back proves nothing. Do: change the
   setting, read, restore, then assert.
 
+## Vendor bundle
+- 2026-09-11: `research/bundle/main.beautified.js` holds one contract class per
+  transport (`at.inject(K => "M" === K ...)` is the receiver, `"dms"` the
+  cable). Do: read the receiver's class before assuming a cable command works
+  there -- the "M" class never sends sleep.
+
 ## Port
 - 2026-09-11: Comparing two device commands through `diff <(a) <(b)` runs
   them at once and the second hits macOS exclusive access. Do: run them in
