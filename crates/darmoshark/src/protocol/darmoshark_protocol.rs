@@ -47,7 +47,7 @@ impl DarmosharkProtocol {
   pub const cmdDongleBaseInfo: u8 = 0x07; // config snapshot; the cable contract uses 0x06
 
   // Status byte of the 0xE4 acknowledgement the receiver posts on 0x54.
-  pub const ackStatusPending: u8 = 0; // command queued, resend until it turns ready
+  pub const ackStatusPending: u8 = 0; // command queued; "ready" may never follow
   pub const ackStatusReady: u8 = 1; // reply is waiting in the feature report
   pub const ackStatusLinkDown: u8 = 2; // receiver has no live link to the mouse
   pub const ackStatusBusy: u8 = 4; // same as pending, receiver still working

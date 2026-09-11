@@ -144,7 +144,17 @@ impl MouseConfigurator {
     enabled_levels: Option<usize>,
   ) -> DarmosharkResult<()> {
     let packet = DpiPacket::build(dpi_values, active_level, enabled_levels)?;
-    self.device.send_command(packet.report_id, &packet.payload)
+    self
+      .device
+      .send_command(packet.report_id, &packet.payload)?;
+    self.settle_on_receiver(|info| {
+      usize::from(info.active_level) == active_level
+        && info
+          .dpi_levels
+          .iter()
+          .map(|&level| u32::from(level))
+          .eq(dpi_values.iter().copied())
+    })
   }
 
   pub fn select_dpi_level(&self, level_index: usize) -> DarmosharkResult<BaseSnapshot> {
@@ -166,12 +176,14 @@ impl MouseConfigurator {
 
   pub fn write_report_rate(&self, hertz: u32) -> DarmosharkResult<()> {
     let packet = ReportRatePacket::build(hertz)?;
-    self.send_acknowledged(&packet, DmsCommands::setReportRate)
+    self.send_acknowledged(&packet, DmsCommands::setReportRate)?;
+    self.settle_on_receiver(|info| ReportRatePacket::code_to_rate(info.report_rate) == Some(hertz))
   }
 
   pub fn write_debounce(&self, milliseconds: u32) -> DarmosharkResult<()> {
     let packet = TuningPacket::build_debounce(milliseconds)?;
-    self.send_acknowledged(&packet, DmsCommands::setButtonDebounce)
+    self.send_acknowledged(&packet, DmsCommands::setButtonDebounce)?;
+    self.settle_on_receiver(|info| u32::from(info.debounce_ms) == milliseconds)
   }
 
   pub fn write_sensor_settings(
@@ -181,7 +193,8 @@ impl MouseConfigurator {
   ) -> DarmosharkResult<()> {
     let [wave, line, motion, scroll, e_sports] = toggles.packet_values();
     let packet = TuningPacket::build_sensor(lift_off, wave, line, motion, scroll, e_sports)?;
-    self.send_acknowledged(&packet, DmsCommands::setSensorLiftCutoff)
+    self.send_acknowledged(&packet, DmsCommands::setSensorLiftCutoff)?;
+    self.settle_on_receiver(|info| info.lift_off == lift_off && info.sensor_toggles() == *toggles)
   }
 
   /// Changes the lift-off distance alone. Its packet also carries the sensor
@@ -235,6 +248,23 @@ impl MouseConfigurator {
   }
 
   // -- internals ----------------------------------------------------------
+
+  /// Over the receiver, reads the snapshot back until the write shows (at most
+  /// ten reads), so whoever reads next sees the new value: the receiver
+  /// acknowledges a write when it queues it, and the mouse applies it up to
+  /// ~200 ms later. A value that never shows is not an error -- the mouse may
+  /// round what it stores -- so this only waits. The cable cannot read back.
+  fn settle_on_receiver(&self, landed: impl Fn(&DongleBaseInfo) -> bool) -> DarmosharkResult<()> {
+    if !self.device.uses_dongle_transport() {
+      return Ok(());
+    }
+    for _ in 0..10 {
+      if landed(&self.read_dongle_base_info()?) {
+        break;
+      }
+    }
+    Ok(())
+  }
 
   /// A short receiver command carrying nothing but its opcode.
   fn request_dongle_opcode(&self, opcode: u8) -> DarmosharkResult<Option<Vec<u8>>> {

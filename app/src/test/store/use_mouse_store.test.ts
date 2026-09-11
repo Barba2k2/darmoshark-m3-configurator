@@ -69,6 +69,17 @@ describe("useMouseStore", () => {
     expect(state.busy).toBe(false);
   });
 
+  it("a failed read keeps the mouse connected and shows why", async () => {
+    await useMouseStore.getState().load();
+    vi.mocked(MouseService.readDeviceState).mockRejectedValue("the mouse fell asleep");
+    await useMouseStore.getState().refreshDevice(false);
+    const state = useMouseStore.getState();
+    expect(state.connection).toBe("connected");
+    expect(state.device).toEqual(DeviceFixtures.receiver);
+    expect(state.status).toBe("error");
+    expect(state.errorDetail).toBe("the mouse fell asleep");
+  });
+
   it("a background refresh leaves fields being edited alone", async () => {
     await useMouseStore.getState().load();
     useMouseStore.getState().editLevel(0, 1200);

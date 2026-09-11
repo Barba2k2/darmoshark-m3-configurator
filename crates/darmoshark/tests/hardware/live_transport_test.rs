@@ -233,3 +233,33 @@ fn changes_the_polling_rate_and_restores_it() {
   assert_eq!(ReportRatePacket::code_to_rate(changed), Some(other_hertz));
   assert_eq!(restored, original);
 }
+
+#[test]
+fn ten_writes_in_a_row_each_read_back() {
+  let _turn = hardware.lock().unwrap_or_else(|poison| poison.into_inner());
+  let Some(configurator) = receiver() else {
+    return;
+  };
+  let original = configurator.read_dongle_base_info().unwrap().debounce_ms;
+  let other = if original <= 18 {
+    original + 2
+  } else {
+    original - 2
+  };
+  let mut read_back = Vec::new();
+  for round in 0..10 {
+    let target = if round % 2 == 0 { other } else { original };
+    configurator.write_debounce(u32::from(target)).unwrap();
+    read_back.push((
+      target,
+      configurator
+        .read_dongle_base_info()
+        .map(|info| info.debounce_ms),
+    ));
+  }
+  configurator.write_debounce(u32::from(original)).unwrap();
+
+  for (target, read) in read_back {
+    assert_eq!(read, Ok(target));
+  }
+}
