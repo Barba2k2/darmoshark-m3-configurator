@@ -1,0 +1,55 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-small);
+  width: var(--level-button-size);
+}
+
+.level {
+  width: var(--level-button-size);
+  height: var(--level-button-size);
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: var(--font-size-body);
+  cursor: pointer;
+  transition: background var(--motion-duration) ease, border-color var(--motion-duration) ease;
+}
+
+.level:hover:enabled {
+  border-color: var(--level-color);
+}
+
+.selected {
+  background: var(--level-color);
+  border-color: var(--level-color);
+  color: var(--color-text-on-color);
+  font-weight: 600;
+}
+
+.value {
+  width: var(--level-button-size);
+  height: var(--level-field-height);
+  padding: var(--spacing-tiny);
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-small);
+  font-size: var(--font-size-caption);
+  text-align: center;
+  appearance: textfield;
+}
+
+.value::-webkit-inner-spin-button,
+.value::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.badge {
+  height: var(--badge-height);
+  color: var(--level-color);
+  font-size: var(--font-size-caption);
+}

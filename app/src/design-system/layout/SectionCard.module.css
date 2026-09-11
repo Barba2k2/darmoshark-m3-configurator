@@ -1,0 +1,15 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+  padding: var(--spacing) var(--spacing-large) var(--spacing-large);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-heading);
+  font-weight: 600;
+}

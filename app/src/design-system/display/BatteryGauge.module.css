@@ -1,0 +1,33 @@
+.gauge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-small);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.caption {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.track {
+  height: var(--gauge-height);
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-small);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--radius-small);
+  background: var(--color-success);
+  transition: width var(--motion-duration) ease;
+}
+
+.low {
+  background: var(--color-danger);
+}
