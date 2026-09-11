@@ -84,6 +84,7 @@ configuração gravada no mouse.
 | Até 5 níveis de DPI | ✅ | ✅ |
 | 6 ou mais níveis | ❌ formato estendido é ignorado | ❌ formato longo não tem rota |
 | Taxa de resposta | ❔ não verificado | ❔ não verificado |
+| Timer de suspensão | ✅ escrita (sem leitura de volta) | ❌ não é repassado |
 | Leitura do bootloader | a do mouse | a do **próprio receptor** |
 
 O receptor perde o link de configuração em silêncio: o cursor continua

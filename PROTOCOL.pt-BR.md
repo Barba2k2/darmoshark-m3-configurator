@@ -135,10 +135,10 @@ responde nada aqui.
 | 1 | perfil onboard ativo |
 | 2 / 3 / 4 | slot usb / 2.4GHz / bluetooth — nibble baixo é o índice de DPI ativo, nibble alto o índice de report rate |
 | 5..14 | cinco uint16 little-endian de DPI |
-| 15 | bits do sensor — `[1:0]` lift-off, `[2]` wave, `[3]` line, `[4]` motion, `[6]` scroll, `[7]` eSports |
+| 15 | bits do sensor, 1 = ligado — `[1:0]` lift-off, `[2]` wave, `[3]` line, `[4]` motion, `[6]` scroll, `[7]` eSports; `[5]` vem ligado no M3 e não corresponde a nada conhecido |
 | 16 | quantidade de níveis de DPI habilitados |
 | 17 | debounce do clique, em milissegundos |
-| 18 | timer de sono, em minutos |
+| 18 | timer de sono, em minutos (só leitura aqui, ver opcode 10) |
 
 Exemplo lido de um M3 com firmware `2.0.9r`:
 
@@ -274,14 +274,14 @@ com `status = 0` em caso de sucesso.
 | 4 | `getDeviceString` | 0xB3 | string do dispositivo |
 | 5 | `getMouseInfo` | 0xB5 | info básica |
 | 6 | `getMouseExtInfo` | 0xB3 | **snapshot completo da config** |
-| 10 | `deviceTime` | 0xB5 | timer de sleep — `[1]` 1=set 2=get, `[2]` minutos |
+| 10 | `deviceTime` | 0xB5 | timer de sleep — `[1]` 1=set 2=get, `[2]` minutos. Só pelo cabo: o contrato do receptor nunca o envia, uma escrita pelo receptor deixa o byte 18 do snapshot igual, e um `get` nunca fica pronto |
 | 11 | `pairButton` | 0xB5 | pareamento |
 | 14 | `profileSwitch` | 0xB5 | troca de perfil — `[1]` índice |
 | 15 | `driverConfigRecovery` | 0xB5 | reset; `[1]=63` = padrão de fábrica |
 | 35 / 36 | `get/setLightEffectParam` | 0xB5 | iluminação |
 | 64 | `setDpi` | 0xB5 | DPI, até 5 níveis |
 | 65 | `setReportRate` | 0xB5 | `[1..2]` nível, `[3..8]` códigos, `[9]` níveis |
-| 66 | `setSensorLiftCutoff` | 0xB5 | `[1]` LOD, `[2]` wave, `[3]` line, `[4]` motion, `[6]` scroll, `[7]` eSports |
+| 66 | `setSensorLiftCutoff` | 0xB5 | `[1]` LOD, `[2]` wave, `[3]` line, `[4]` motion, `[6]` scroll, `[7]` eSports. wave/line/motion: 1 = ligado, 2 = desligado; scroll/eSports: 2 = ligado, 1 = desligado (confirmado um por vez contra o byte 15 do snapshot). Toda escrita define os cinco, então mudar o lift-off exige reenviar os valores guardados |
 | 67 | `setButtonDebounce` | 0xB5 | `[1]` ms |
 | 68 | `setDpiExtended` | 0xB3 | DPI, mais de 5 níveis |
 | 69 | `setScroll` | 0xB5 | `[1]` speed, `[2]` inertia, `[3]` spl |

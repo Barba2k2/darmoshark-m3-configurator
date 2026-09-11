@@ -84,6 +84,7 @@ mouse's stored configuration back.
 | Up to 5 DPI levels | ✅ | ✅ |
 | 6 or more levels | ❌ extended format is ignored | ❌ no route for the long form |
 | Polling rate | ❔ unverified | ❔ unverified |
+| Sleep timer | ✅ write (cannot be read back) | ❌ not relayed |
 | Bootloader read | the mouse's | the **receiver's** own |
 
 The receiver drops its config link silently: the cursor keeps working while
