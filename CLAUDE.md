@@ -101,21 +101,21 @@ contract talks about exist on neither interface — writing them reaches nothing
 
 Reading over the receiver has traps, all encoded in `request_dongle`:
 
-- The `0xE4` status is `0` or `4` while pending, `1` when the reply is ready in
-  the feature report, and **`2` when the RF link is dead**. Every command then
-  answers `2` while the cursor keeps moving, because HID input rides a separate
-  path. Replugging the receiver recovers it; once it also came back on its own,
-  not yet reproduced.
-- The feature buffer holds the *previous* reply until the new one lands, so a
-  read that arrives early looks like a valid answer to the wrong question. The
-  echoed opcode is checked on every reply; commands that address a slot pass
-  `echo_bytes = 2` so the index is checked too (all five buttons share one
+- The `0xE4` status is `0` or `4` while pending, `1` when the reply is ready,
+  and **`2` when the mouse is asleep** — moving it or clicking wakes it; no
+  replug needed.
+- The feature buffer holds the *previous* reply until the new one lands, and
+  two reads of the same opcode echo the same bytes. "Ready" cannot be trusted
+  either: about one read in ten never posts it. So when the buffer already
+  echoes the command, `request_dongle` first sends a `primer` read with a
+  different echo (bond, or snapshot for a bond request, or another slot), then
+  polls the buffer until the real echo appears. Acks are only watched for `2`.
+  Commands that address a slot pass `echo_bytes = 2` (all buttons share one
   opcode).
-- The ack names no command (`E4 <status> 00`), and a write posts its own `E4 00`
-  300-800 ms late. So the input queue is drained before each request, the
-  feature buffer is read only on status `1` (or when no ack comes at all, as
-  with the bond read), and a receiver write waits for its frame before
-  returning — otherwise a read right after a write returns the previous value.
+- The ack names no command, so the input queue is drained before every send.
+  A receiver write returns once queued; the mouse applies it up to ~200 ms
+  later, so `MouseConfigurator::settle_on_receiver` reads it back (at most ten
+  reads, never an error) before a write returns.
 
 `setReportRate` is `[65, index, index]`: the vendor contracts name the index
 `level`, which is how the old builder mistook it for the DPI level. The index is

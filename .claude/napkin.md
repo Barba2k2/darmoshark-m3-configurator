@@ -1,12 +1,17 @@
 # Napkin
 
 ## Receiver transport
-- 2026-09-11: A write over the receiver lands 300-800 ms later (one `E4 00`
-  on `0x54`). Reading before that returns the old value. Do: make the write
-  wait for its frame, then read.
-- 2026-09-11: The ack never names the command (`E4 <status> 00`). Do: drain
-  `0x54` before sending, open the feature buffer only on status 1 (or no ack at
-  all, as the bond read does), resend while pending.
+- 2026-09-11: Status 2 ("no link") is the mouse asleep. Do: move the mouse
+  before a hardware run; never tell the user to replug first.
+- 2026-09-11: Receiver failures come and go with conditions (sleep, load); a
+  passing run on old code proves nothing. Do: capture raw 0x54 frames with a
+  probe before and after a transport change.
+- 2026-09-11: A receiver write is acked when queued; the mouse applies it up
+  to ~200 ms later. Do: read the setting back until it shows (at most ten
+  reads, never an error), as `settle_on_receiver` does.
+- 2026-09-11: Neither "ready" nor the echo proves a reply is fresh. Do: if the
+  buffer already echoes the command, send a primer with a different echo
+  first, then poll until the real echo shows.
 - 2026-09-11: Negative results read before the transport fix (e.g. "rate does
   not move the nibble") were stale reads. Do: re-test on hardware before
   trusting any conclusion older than the fix.
