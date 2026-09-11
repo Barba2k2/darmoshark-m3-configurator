@@ -1,4 +1,5 @@
 use crate::error::darmoshark_error::{DarmosharkError, DarmosharkResult};
+use crate::packets::sensor_toggles::SensorToggles;
 use crate::replies::base_info::BaseInfo;
 
 /// Stored configuration as the 2.4GHz receiver reports it (opcode 0x07).
@@ -40,6 +41,17 @@ pub struct DongleBaseInfo {
 
 impl DongleBaseInfo {
   pub const opcode: u8 = 0x07;
+
+  /// The sensor switches as stored, ready to be written back unchanged.
+  pub fn sensor_toggles(&self) -> SensorToggles {
+    SensorToggles {
+      wave: self.wave == 1,
+      line: self.line == 1,
+      motion: self.motion == 1,
+      scroll: self.scroll == 1,
+      e_sports: self.e_sports == 1,
+    }
+  }
 
   pub fn parse(reply: &[u8]) -> DarmosharkResult<Self> {
     if reply.len() < 20 {
