@@ -1,0 +1,25 @@
+# Delivery loop manifest for the Darmoshark M3 configurator.
+stack: rust (crates/darmoshark) + python (src/, until the port finishes)
+tasks:
+  - conversation (no backlog file yet)
+context:
+  - .claude/napkin.md
+  - CLAUDE.md
+  - PROTOCOL.md
+gate:
+  - cargo fmt --all --check
+  - cargo clippy --all-targets -- -D warnings
+  - cargo test
+  - PYTHONPATH=src .venv/bin/python -m unittest discover -s tests
+service:
+  - DARMOSHARK_HARDWARE=1 cargo test --test hardware -- --test-threads=1 --nocapture
+screen:
+  how: cli
+  note: >
+    Until the Rust CLI exists (step 2), the screen level is the Python CLI
+    against the same hardware: PYTHONPATH=src .venv/bin/python src/cli.py info
+manual:
+  - The receiver link dies (status 2) and only a physical replug revives it.
+  - Mouse switch on 2.4G for receiver tests; charging cable for cable tests.
+record:
+  - .claude/napkin.md
