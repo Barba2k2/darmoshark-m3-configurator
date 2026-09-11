@@ -73,8 +73,12 @@ A leitura é o que o cabo não faz. O receptor responde no **input report `0x54`
 com um frame de confirmação, e só então a resposta é buscada no feature report:
 
 ```
-54 E4 <status> <opcode>
+54 E4 <status> 00
 ```
+
+O byte depois do status é onde o bundle do fabricante espera o eco do opcode,
+mas este receptor sempre manda `00` ali: a confirmação não diz a qual comando
+pertence.
 
 | Status | Significado |
 |---|---|
@@ -83,7 +87,13 @@ com um frame de confirmação, e só então a resposta é buscada no feature rep
 | 2 | **sem link com o mouse** — tirar e recolocar o receptor |
 | 4 | ocupado — igual a enfileirado |
 
-Duas armadilhas, ambas caras:
+Uma leitura costuma postar `E4 00` e depois `E4 01` em 10–80 ms. Uma escrita
+posta um único `E4 00`, de 300 a 800 ms depois do envio, quando o receptor já
+repassou o comando ao mouse — uma leitura feita antes desse frame ainda devolve
+o valor antigo. A leitura de bond (opcode 3) não posta confirmação nenhuma; a
+resposta simplesmente está no feature report.
+
+Quatro armadilhas, todas caras:
 
 - **Status 2 não se recupera sozinho.** Perdido o link, todo comando responde
   `2` para sempre, inclusive os que funcionariam. O cursor continua se mexendo
@@ -94,6 +104,14 @@ Duas armadilhas, ambas caras:
   pergunta. Sempre conferir o eco do opcode — e, nos comandos que endereçam um
   slot (botões, macros), também o eco do índice, já que todos os botões
   compartilham o mesmo opcode.
+- **Só o status pronto libera o buffer.** Duas leituras do mesmo opcode ecoam
+  os mesmos bytes, então o eco não distingue a resposta nova da anterior. Ler
+  o feature report com status `0` devolve o snapshot anterior toda vez; esperar
+  o `1`, e reenviar se ele não vier.
+- **Confirmações velhas ficam esperando na fila.** Como o frame não nomeia o
+  comando, o `E4 00` que uma escrita posta atrasado é indistinguível do que a
+  próxima leitura posta. Esvaziar o input `0x54` antes de enviar, e deixar a
+  escrita esperar o próprio frame antes de qualquer leitura conferir o valor.
 
 Leituras confirmadas em hardware:
 
