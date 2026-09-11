@@ -1,5 +1,5 @@
 # Delivery loop manifest for the Darmoshark M3 configurator.
-stack: rust (crates/darmoshark) + python (src/, until the port finishes)
+stack: rust (crates/, app/src-tauri) + react (app/src) + python oracle (src/, until step 4)
 tasks:
   - conversation (no backlog file yet)
 context:
@@ -11,11 +11,15 @@ gate:
   - cargo clippy --all-targets -- -D warnings
   - cargo test
   - PYTHONPATH=src .venv/bin/python -m unittest discover -s tests
+  - cd app && pnpm typecheck && pnpm lint && pnpm test
 service:
   - DARMOSHARK_HARDWARE=1 cargo test --test hardware -- --test-threads=1 --nocapture
 screen:
-  how: cli
+  how: cli + desktop window
   note: >
+    Window: cd app && pnpm tauri dev (ask first, it compiles), then screenshot
+    the "Darmoshark M3" window with computer-use.
+    CLI:
     cargo build -q -p darmoshark-cli, then ./target/debug/dms info (and the
     command under test). Run device commands one at a time: macOS opens the
     interface exclusively, so two processes at once fail with "exclusive

@@ -7,6 +7,12 @@
 - 2026-09-11: The ack never names the command (`E4 <status> 00`). Do: drain
   `0x54` before sending, open the feature buffer only on status 1 (or no ack at
   all, as the bond read does), resend while pending.
+- 2026-09-11: Negative results read before the transport fix (e.g. "rate does
+  not move the nibble") were stale reads. Do: re-test on hardware before
+  trusting any conclusion older than the fix.
+- 2026-09-11: A polling rate is measurable: open the receiver's mouse
+  interface (usage 1/2) shared (`hidapi` feature `macos-shared-device`) and
+  time input reports while the mouse moves; p10 of the gaps is the interval.
 - 2026-09-11: Same-value write + read-back proves nothing. Do: change the
   setting, read, restore, then assert.
 
