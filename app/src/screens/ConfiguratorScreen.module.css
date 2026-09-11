@@ -1,0 +1,11 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-large);
+  min-height: 100vh;
+  padding: var(--spacing-large) var(--spacing-section);
+}
+
+.spacer {
+  flex: 1;
+}
