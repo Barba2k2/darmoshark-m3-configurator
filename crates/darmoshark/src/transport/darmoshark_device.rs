@@ -173,21 +173,19 @@ impl DarmosharkDevice {
       .map_err(|error| DarmosharkError::Device(format!("failed to send receiver command: {error}")))
   }
 
-  /// Round trip over the receiver, honouring its acknowledgement states.
+  /// Round trip over the receiver.
   ///
-  /// The receiver answers on input report 0x54 with 0xE4 <status>: pending
-  /// and busy both mean "ask again in a moment", ready means the reply is
-  /// sitting in the feature report. The ack carries no opcode, so frames left
-  /// in the queue by an earlier command -- a write posts its pending ack about
-  /// 600 ms later -- are drained before sending, and the feature report is
-  /// read only once this request turns ready.
+  /// The reply lands in the feature report, which keeps the previous answer
+  /// until the new one arrives. The echoed leading bytes -- the opcode, plus
+  /// the slot for commands that address one (a button, a macro) -- tell which
+  /// command an answer belongs to, but not whether it is this request's or an
+  /// older one to the same command. So when the buffer already echoes this
+  /// command, a primer read with a different echo is sent first; once the
+  /// buffer holds the primer, an answer echoing this command can only be new.
   ///
-  /// The reply buffer keeps the previous answer until the new one lands, so
-  /// the echoed leading bytes are what prove the data belongs to this request
-  /// -- one byte is the opcode, and commands addressing a slot (a button, a
-  /// macro) need two. Two reads of the same opcode echo the same bytes, which
-  /// is why a request left pending is sent again rather than read. Some
-  /// commands (the bond read) post no ack at all; their reply is read as is.
+  /// The 0xE4 acknowledgements on input 0x54 are not relied on: about one read
+  /// in ten never posts "ready", and some commands (the bond read) post nothing.
+  /// They are only watched for status 2, the dead link.
   pub fn request_dongle(
     &self,
     payload: &[u8],
@@ -197,19 +195,17 @@ impl DarmosharkDevice {
     let echo = &payload[..echo_bytes.min(payload.len())];
     let (feature_id, size) = Self::dongle_channel(payload.len())?;
     for attempt in 0..attempts {
-      while self
-        .read_input(Instant::now() + Duration::from_millis(1))?
-        .is_some()
-      {}
-      self.send_dongle(payload)?;
-      let status = self.await_dongle_ack()?;
-      if status == Some(DarmosharkProtocol::ackStatusLinkDown) {
-        return Err(Self::link_down());
-      }
-      if matches!(status, None | Some(DarmosharkProtocol::ackStatusReady))
-        && let Some(reply) = self.get_feature(feature_id, size)
-        && reply.get(1..1 + echo.len()) == Some(echo)
+      if self
+        .get_feature(feature_id, size)
+        .is_some_and(|reply| reply.get(1..1 + echo.len()) == Some(echo))
       {
+        let primer = Self::primer(payload, echo_bytes);
+        self.send_dongle(&primer)?;
+        self.await_echo(feature_id, size, &primer[..echo.len()])?;
+      }
+      self.drain_input()?;
+      self.send_dongle(payload)?;
+      if let Some(reply) = self.await_echo(feature_id, size, echo)? {
         return Ok(Some(reply));
       }
       if attempt + 1 < attempts {
@@ -219,18 +215,38 @@ impl DarmosharkDevice {
     Ok(None)
   }
 
+  /// A read whose answer differs from `payload`'s: the same slot read aimed at
+  /// another slot, or else the bond read -- the snapshot when the bond itself
+  /// is asked. Its reply is discarded; it only has to replace the buffer.
+  pub fn primer(payload: &[u8], echo_bytes: usize) -> Vec<u8> {
+    if echo_bytes >= 2 {
+      let mut primer = payload.to_vec();
+      primer[1] = if primer[1] == 0 { 1 } else { 0 };
+      return primer;
+    }
+    let mut primer = vec![0u8; DarmosharkProtocol::donglePayloadSize];
+    primer[0] = if payload.first() == Some(&DmsCommands::getBondInfo) {
+      DarmosharkProtocol::cmdDongleBaseInfo
+    } else {
+      DmsCommands::getBondInfo
+    };
+    primer
+  }
+
   /// Delivers a dms payload over whichever transport this interface uses.
   ///
   /// The receiver takes the payload as feature report 0x51. The cable takes
   /// the identical bytes as feature report 0x52, zero padded to 64 bytes.
   ///
   /// The receiver relays a write to the mouse asynchronously and posts one
-  /// 0xE4 frame when it went through, 300-800 ms later; a read before that
-  /// still sees the old value. The write waits for that frame so a read that
-  /// follows is coherent. Silence is not an error -- the receiver does not
-  /// promise the frame -- but a dead link is.
+  /// 0xE4 frame when it went through, from a few ms to 800 ms later; a read
+  /// before that still sees the old value. The write drains the queue first,
+  /// so a leftover frame cannot end the wait early, then waits for its own
+  /// frame so a read that follows is coherent. Silence is not an error -- the
+  /// receiver does not promise the frame -- but a dead link is.
   pub fn send_command(&self, report_id: u8, payload: &[u8]) -> DarmosharkResult<()> {
     if self.uses_dongle_transport() {
+      self.drain_input()?;
       self.send_dongle(payload)?;
       let deadline = Instant::now() + Duration::from_millis(1500);
       while let Some(frame) = self.read_input(deadline)? {
@@ -314,32 +330,50 @@ impl DarmosharkDevice {
     framed
   }
 
-  /// Waits for a settled 0xE4 status -- ready or link down -- skipping the
-  /// pending and busy frames. On timeout, the last unsettled status seen, or
-  /// `None` when no ack arrived at all.
-  fn await_dongle_ack(&self) -> DarmosharkResult<Option<u8>> {
-    let settled = [
-      DarmosharkProtocol::ackStatusReady,
-      DarmosharkProtocol::ackStatusLinkDown,
-    ];
-    let deadline = Instant::now() + Duration::from_millis(600);
-    let mut last = None;
-    while let Some(frame) = self.read_input(deadline)? {
-      if frame.len() > 2 && frame[1] == DmsCommands::ackOpcode {
-        if settled.contains(&frame[2]) {
-          return Ok(Some(frame[2]));
+  /// Polls the feature report until it echoes `echo`, for up to 1.5 s,
+  /// failing at once if the receiver reports a dead link meanwhile.
+  fn await_echo(
+    &self,
+    feature_id: u8,
+    size: usize,
+    echo: &[u8],
+  ) -> DarmosharkResult<Option<Vec<u8>>> {
+    let deadline = Instant::now() + Duration::from_millis(1500);
+    loop {
+      while let Some(frame) = self.read_input(Instant::now() + Duration::from_millis(1))? {
+        if frame.len() > 2
+          && frame[1] == DmsCommands::ackOpcode
+          && frame[2] == DarmosharkProtocol::ackStatusLinkDown
+        {
+          return Err(Self::link_down());
         }
-        last = Some(frame[2]);
       }
+      if let Some(reply) = self.get_feature(feature_id, size)
+        && reply.get(1..1 + echo.len()) == Some(echo)
+      {
+        return Ok(Some(reply));
+      }
+      if Instant::now() >= deadline {
+        return Ok(None);
+      }
+      thread::sleep(Duration::from_millis(5));
     }
-    Ok(last)
+  }
+
+  /// Discards every input report already queued.
+  fn drain_input(&self) -> DarmosharkResult<()> {
+    while self
+      .read_input(Instant::now() + Duration::from_millis(1))?
+      .is_some()
+    {}
+    Ok(())
   }
 
   fn link_down() -> DarmosharkError {
     DarmosharkError::Device(
-      "the receiver reports no live link to the mouse. Set the switch to 2.4G, \
-       then unplug and replug the receiver -- a dropped link does not recover \
-       on its own."
+      "the receiver has no link to the mouse, which usually means the mouse fell \
+       asleep. Move it or click to wake it, then try again; if it stays down, check \
+       that the switch is on 2.4G."
         .into(),
     )
   }
