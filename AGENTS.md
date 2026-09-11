@@ -69,10 +69,18 @@ command prints (`offline_`, `read_` and `write_commands`), so output is tested
 without a device. `tests/oracle/fixtures/python_cli.json` froze what the Python
 CLI printed.
 
-**`app/`** — Tauri 2. `src-tauri/` is thin: `DeviceGate` opens a fresh
-configurator per command and serialises them (macOS opens the interface
-exclusively, and unplugging must not wedge the window); `dto/` is what crosses
-to the webview, in camelCase; `commands/` holds the `#[tauri::command]`s.
+**`app/`** — Tauri 2, a menu bar app (`ActivationPolicy::Accessory`: no Dock
+icon; the window starts hidden and closing it only hides it). `src-tauri/` is
+thin: `DeviceGate` opens a fresh configurator per operation and serialises them
+(macOS opens the interface exclusively, and unplugging must not wedge the app),
+and `read_device_state` is the one read both surfaces use; `dto/` is what
+crosses to the webview, in camelCase; `commands/` holds the
+`#[tauri::command]`s, and every write redraws the menu bar. `tray/` is the
+status item: `MenuBar` (title `25% · 3200`, DPI and rate menu, 30 s poll, all
+HID off the main thread), `MenuBarText` (pure, tested), `MenuBarLabels` (copy),
+`MenuBarCache` (last reading, so a click redraws at once). A menu write emits
+`device-changed`, which the window listens for. `DarmosharkError::Asleep` is
+status 2, so both surfaces can say "move the mouse" without matching text.
 `src/` is React + Zustand (`useState` is banned by lint): `store/use_mouse_store.ts`
 is the single store, `services/mouse_service.ts` the only `invoke` caller,
 `routes/app_routes.ts` every command name, `labels/labels.ts` all copy

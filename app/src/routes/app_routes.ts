@@ -8,4 +8,6 @@ export class AppRoutes {
   static readonly writeDebounce = "write_debounce";
   static readonly writeSleepTimer = "write_sleep_timer";
   static readonly restoreFactoryDefaults = "restore_factory_defaults";
+  /** Event the menu bar emits after it changed a setting. */
+  static readonly deviceChangedEvent = "device-changed";
 }

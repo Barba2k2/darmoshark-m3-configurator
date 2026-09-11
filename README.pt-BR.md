@@ -43,6 +43,11 @@ livres de 50 a 26000, taxa de resposta, altura de acionamento, debounce e
 temporizador de suspensão. Pelo receptor a janela abre com os valores gravados
 no mouse; pelo cabo, que não consegue lê-los, com os de fábrica.
 
+O app vive na barra de menus, não no Dock: o item mostra bateria e DPI ativo
+(`25% · 3200`), e o menu troca o nível de DPI e a taxa de resposta ou abre a
+janela. Fechar a janela mantém o app na barra; "Sair" encerra.
+`--` quer dizer sem leitura — em geral o mouse dormiu; mexer nele o acorda.
+
 ### Linha de comando
 
 ```bash

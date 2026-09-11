@@ -252,7 +252,7 @@ impl DarmosharkDevice {
       while let Some(frame) = self.read_input(deadline)? {
         if frame.len() > 2 && frame[1] == DmsCommands::ackOpcode {
           if frame[2] == DarmosharkProtocol::ackStatusLinkDown {
-            return Err(Self::link_down());
+            return Err(DarmosharkError::Asleep);
           }
           break;
         }
@@ -345,7 +345,7 @@ impl DarmosharkDevice {
           && frame[1] == DmsCommands::ackOpcode
           && frame[2] == DarmosharkProtocol::ackStatusLinkDown
         {
-          return Err(Self::link_down());
+          return Err(DarmosharkError::Asleep);
         }
       }
       if let Some(reply) = self.get_feature(feature_id, size)
@@ -367,15 +367,6 @@ impl DarmosharkDevice {
       .is_some()
     {}
     Ok(())
-  }
-
-  fn link_down() -> DarmosharkError {
-    DarmosharkError::Device(
-      "the receiver has no link to the mouse, which usually means the mouse fell \
-       asleep. Move it or click to wake it, then try again; if it stays down, check \
-       that the switch is on 2.4G."
-        .into(),
-    )
   }
 
   /// Next input report that arrives before `deadline`, report id included.
