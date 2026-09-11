@@ -43,6 +43,11 @@ value fields from 50 to 26000, polling rate, lift-off distance, debounce and
 sleep timer. Through the receiver the window opens with the values stored in
 the mouse; through the cable, which cannot read them, with the factory ones.
 
+The app lives in the menu bar, not the Dock: the status item shows battery and
+active DPI (`25% · 3200`), and its menu switches DPI level and polling rate or
+opens the window. Closing the window keeps it in the menu bar; "Sair" quits.
+`--` means no reading — usually the mouse fell asleep; moving it wakes it.
+
 ### Command line
 
 ```bash
