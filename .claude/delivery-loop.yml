@@ -16,8 +16,10 @@ service:
 screen:
   how: cli
   note: >
-    Until the Rust CLI exists (step 2), the screen level is the Python CLI
-    against the same hardware: PYTHONPATH=src .venv/bin/python src/cli.py info
+    cargo build -q -p darmoshark-cli, then ./target/debug/dms info (and the
+    command under test). Run device commands one at a time: macOS opens the
+    interface exclusively, so two processes at once fail with "exclusive
+    access and device already open".
 manual:
   - The receiver link dies (status 2) and only a physical replug revives it.
   - Mouse switch on 2.4G for receiver tests; charging cable for cable tests.
