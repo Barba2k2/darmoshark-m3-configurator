@@ -33,7 +33,32 @@ CLI: `PYTHONPATH=src .venv/bin/python src/cli.py <command>` (`list`, `capabiliti
 `colors`, `battery`, `dfu`, `dpi`, `use`, `rate`, `debounce`, `lod`, `sleep`,
 `profile`, `button`, `reset`, `info`, `buttons`, `bond`).
 
-No linter or type checker is configured.
+No linter or type checker is configured for the Python side.
+
+### Rust port (in progress)
+
+The Python is being replaced by Rust + Tauri, in steps: `crates/darmoshark`
+(library, done) → CLI → Tauri app → remove Python. Until the last step both
+live side by side and a protocol fix goes into both.
+
+```bash
+cargo fmt --all --check && cargo clippy --all-targets -- -D warnings && cargo test
+```
+
+Hardware (skips itself without the variable; changes a setting, reads it back,
+restores it):
+
+```bash
+DARMOSHARK_HARDWARE=1 cargo test --test hardware -- --test-threads=1 --nocapture
+```
+
+`crates/darmoshark/src` mirrors the Python layers in folders: `protocol/`,
+`packets/`, `replies/`, `transport/` (the only `hidapi` user), `configurator/`,
+`profile/` (embeds `reference/darmoshark-m3-profile.json`), `error/`. One type
+per file, 2-space indent (`rustfmt.toml`), constants in camelCase under
+`#![allow(non_upper_case_globals)]`. `tests/oracle/fixtures/python_oracle.json`
+holds frames and decodes recorded from the Python implementation; the Rust
+output must match it byte for byte.
 
 ## Architecture
 
@@ -91,6 +116,11 @@ Reading over the receiver has two traps, both encoded in `requestDongle`:
   read that arrives early looks like a valid answer to the wrong question. The
   echoed opcode is checked on every reply; commands that address a slot pass
   `echoBytes=2` so the index is checked too (all five buttons share one opcode).
+- The ack names no command (`E4 <status> 00`), and a write posts its own `E4 00`
+  300-800 ms late. So the input queue is drained before each request, the
+  feature buffer is read only on status `1` (or when no ack comes at all, as
+  with the bond read), and a receiver write waits for its frame before
+  returning — otherwise a read right after a write returns the previous value.
 
 Still unverified after the receiver work: `setReportRate`. Neither
 `ReportRatePacket`'s form (one index byte per level) nor the bundle's `M`-contract
