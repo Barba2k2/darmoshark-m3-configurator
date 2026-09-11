@@ -29,16 +29,17 @@ PYTHONPATH=src .venv/bin/python -m unittest tests.test_packets.DpiPacketTest.tes
 ```
 
 GUI: `PYTHONPATH=src .venv/bin/python src/gui/app.py`
-CLI: `PYTHONPATH=src .venv/bin/python src/cli.py <command>` (`list`, `capabilities`,
-`colors`, `battery`, `dfu`, `dpi`, `use`, `rate`, `debounce`, `lod`, `sleep`,
-`profile`, `button`, `reset`, `info`, `buttons`, `bond`).
+CLI: `cargo run -q -p darmoshark-cli -- <command>` (binary `dms`; `list`,
+`capabilities`, `colors`, `battery`, `dfu`, `dpi`, `use`, `rate`, `debounce`,
+`lod`, `sleep`, `profile`, `button`, `reset`, `info`, `buttons`, `bond`).
 
 No linter or type checker is configured for the Python side.
 
 ### Rust port (in progress)
 
 The Python is being replaced by Rust + Tauri, in steps: `crates/darmoshark`
-(library, done) → CLI → Tauri app → remove Python. Until the last step both
+(library, done) → `crates/cli` (done, `src/cli.py` removed) → Tauri app →
+remove Python. Until the last step both
 live side by side and a protocol fix goes into both.
 
 ```bash
@@ -85,7 +86,11 @@ wedge the window). Widgets in `gui/widgets/` are string-free and take text as
 arguments; all copy lives in `labels.py` (currently Portuguese) and all colours
 and metrics in `theme.py`.
 
-**`src/cli.py`** — argparse front-end over the same `MouseConfigurator`.
+**`crates/cli`** — the `dms` binary, clap over the Rust `MouseConfigurator`.
+`arguments/` holds the clap definition, `commands/` returns the text each
+command prints (`offline_`, `read_` and `write_commands`), so output is tested
+without a device. `tests/oracle/fixtures/python_cli.json` froze what the
+Python CLI printed; the Rust output must match it.
 
 ## Two transports, one payload
 
@@ -127,6 +132,8 @@ Still unverified after the receiver work: `setReportRate`. Neither
 form (uint16 Hz per level) moves the rate nibble of the snapshot, and the
 nibble's own mapping is unconfirmed. Do not "fix" the builder to the other
 layout without hardware evidence — that swaps one unverified guess for another.
+The sleep timer is in the same state: after `sleep 5` (opcode 10, set) the
+snapshot's byte 18 still reads `0`, in both implementations.
 
 `DarmosharkDevice.usesCableTransport` and `usesDongleTransport` select the path;
 `MouseConfigurator._sendAcknowledged` skips ACK checking on both, since neither
