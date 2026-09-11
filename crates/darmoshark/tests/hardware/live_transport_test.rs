@@ -8,6 +8,7 @@ use std::sync::Mutex;
 
 use darmoshark::configurator::mouse_configurator::MouseConfigurator;
 use darmoshark::packets::button_packet::ButtonPacket;
+use darmoshark::packets::sensor_toggles::SensorToggles;
 use darmoshark::protocol::darmoshark_protocol::DarmosharkProtocol;
 use darmoshark::replies::base_snapshot::BaseSnapshot;
 use darmoshark::transport::darmoshark_device::DarmosharkDevice;
@@ -137,4 +138,76 @@ fn changes_the_debounce_and_restores_it() {
 
   assert_eq!(changed, other);
   assert_eq!(restored, original);
+}
+
+#[test]
+fn each_sensor_switch_lands_on_its_own_bit_and_restores() {
+  let _turn = hardware.lock().unwrap_or_else(|poison| poison.into_inner());
+  let Some(configurator) = receiver() else {
+    return;
+  };
+  let stored = |configurator: &MouseConfigurator| configurator.read_dongle_base_info().unwrap();
+  let before = stored(&configurator);
+  let original = before.sensor_toggles();
+  let flips: [fn(&mut SensorToggles); 5] = [
+    |toggles| toggles.wave = !toggles.wave,
+    |toggles| toggles.line = !toggles.line,
+    |toggles| toggles.motion = !toggles.motion,
+    |toggles| toggles.scroll = !toggles.scroll,
+    |toggles| toggles.e_sports = !toggles.e_sports,
+  ];
+  let mut read_back = Vec::new();
+  for flip in flips {
+    let mut flipped = original;
+    flip(&mut flipped);
+    configurator
+      .write_sensor_settings(before.lift_off, &flipped)
+      .unwrap();
+    read_back.push((flipped, stored(&configurator)));
+  }
+  configurator
+    .write_sensor_settings(before.lift_off, &original)
+    .unwrap();
+  let restored = stored(&configurator);
+
+  for (flipped, after) in read_back {
+    assert_eq!(after.sensor_toggles(), flipped);
+    assert_eq!(after.lift_off, before.lift_off);
+  }
+  assert_eq!(restored.sensor_toggles(), original);
+}
+
+#[test]
+fn lift_off_keeps_the_stored_switches() {
+  let _turn = hardware.lock().unwrap_or_else(|poison| poison.into_inner());
+  let Some(configurator) = receiver() else {
+    return;
+  };
+  let before = configurator.read_dongle_base_info().unwrap();
+  let other = if before.lift_off == 1 { 2 } else { 1 };
+  let mut switched = before.sensor_toggles();
+  switched.line = !switched.line;
+  configurator
+    .write_sensor_settings(before.lift_off, &switched)
+    .unwrap();
+  configurator.write_lift_off(other).unwrap();
+  let after = configurator.read_dongle_base_info().unwrap();
+  configurator
+    .write_sensor_settings(before.lift_off, &before.sensor_toggles())
+    .unwrap();
+  let restored = configurator.read_dongle_base_info().unwrap();
+
+  assert_eq!(after.lift_off, other);
+  assert_eq!(after.sensor_toggles(), switched);
+  assert_eq!(restored.lift_off, before.lift_off);
+  assert_eq!(restored.sensor_toggles(), before.sensor_toggles());
+}
+
+#[test]
+fn the_receiver_refuses_the_sleep_timer() {
+  let _turn = hardware.lock().unwrap_or_else(|poison| poison.into_inner());
+  let Some(configurator) = receiver() else {
+    return;
+  };
+  assert!(configurator.write_sleep_timer(5).is_err());
 }

@@ -1,5 +1,6 @@
 //! Bytes captured from a real receiver (M3, fw 2.0.9r) over 2.4GHz.
 
+use darmoshark::packets::sensor_toggles::SensorToggles;
 use darmoshark::replies::dongle_base_info::DongleBaseInfo;
 
 const snapshot: [u8; 21] = [
@@ -38,4 +39,10 @@ fn rejects_more_levels_than_the_reply_carries() {
   let mut truncated = snapshot;
   truncated[17] = 8;
   assert!(DongleBaseInfo::parse(&truncated).is_err());
+}
+
+#[test]
+fn captured_switches_are_the_vendor_defaults() {
+  let info = DongleBaseInfo::parse(&snapshot).unwrap();
+  assert_eq!(info.sensor_toggles(), SensorToggles::vendorDefaults);
 }
