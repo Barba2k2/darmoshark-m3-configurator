@@ -118,8 +118,6 @@ Other Darmoshark models sharing this protocol may work, but were not tested.
 crates/darmoshark/ protocol, packet builders, decoders, HID transport (Rust)
 crates/cli/        `dms`, the command line interface
 app/               Tauri window: React + Zustand in src/, commands in src-tauri/
-src/darmoshark/    the same library in Python, kept as the parity oracle
-tests/             Python packet encoding tests
 reference/         public vendor definitions for this model
 ```
 
@@ -131,10 +129,6 @@ cargo test
 
 ```bash
 cd app && pnpm typecheck && pnpm lint && pnpm test
-```
-
-```bash
-PYTHONPATH=src .venv/bin/python -m unittest discover -s tests
 ```
 
 With the mouse or receiver plugged in, `DARMOSHARK_HARDWARE=1 cargo test --test

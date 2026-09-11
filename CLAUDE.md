@@ -9,78 +9,65 @@ The `dms` wire protocol was reverse engineered from the vendor's WebHID bundle
 (`darmoshark.cc`) and validated against real hardware; `PROTOCOL.md` is the
 authoritative spec and must be updated alongside any protocol change.
 
-Rust (`crates/`, `app/src-tauri/`) and a React webview (`app/src/`, pnpm). The
-remaining Python (`src/darmoshark/`, `tests/`) needs only `hidapi` and runs from
-`.venv` with `PYTHONPATH=src`; it is kept as the parity oracle until step 4.
+Rust workspace (`crates/darmoshark`, `crates/cli`, `app/src-tauri`) plus a
+React webview (`app/src`, pnpm). The original Python implementation was
+removed after the port; what it produced survives only as frozen parity
+fixtures.
 
 ## Commands
-
-```bash
-python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
-```
-
-```bash
-PYTHONPATH=src .venv/bin/python -m unittest discover -s tests
-```
-
-Single test:
-
-```bash
-PYTHONPATH=src .venv/bin/python -m unittest tests.test_packets.DpiPacketTest.test_encodes_five_levels_little_endian
-```
-
-GUI: `cd app && pnpm tauri dev` (compiles the Rust side first; ask before
-running it). Frontend gate: `cd app && pnpm typecheck && pnpm lint && pnpm test`.
-CLI: `cargo run -q -p darmoshark-cli -- <command>` (binary `dms`; `list`,
-`capabilities`, `colors`, `battery`, `dfu`, `dpi`, `use`, `rate`, `debounce`,
-`lod`, `sleep`, `profile`, `button`, `reset`, `info`, `buttons`, `bond`).
-
-No linter or type checker is configured for the Python side.
-
-### Rust port (in progress)
-
-The Python is being replaced by Rust + Tauri, in steps: `crates/darmoshark`
-(library, done) → `crates/cli` (done, `src/cli.py` removed) → `app/` (Tauri,
-done, `src/gui/` removed) → remove Python. Until the last step both
-live side by side and a protocol fix goes into both.
 
 ```bash
 cargo fmt --all --check && cargo clippy --all-targets -- -D warnings && cargo test
 ```
 
-Hardware (skips itself without the variable; changes a setting, reads it back,
-restores it):
+```bash
+cd app && pnpm install && pnpm typecheck && pnpm lint && pnpm test
+```
+
+Single test: `cargo test -p darmoshark --test packets dpi_packet_test::encodes_five_levels_little_endian`
+
+Hardware (skips itself without the variable; each write changes a setting,
+reads it back, then restores it):
 
 ```bash
 DARMOSHARK_HARDWARE=1 cargo test --test hardware -- --test-threads=1 --nocapture
 ```
 
-`crates/darmoshark/src` mirrors the Python layers in folders: `protocol/`,
-`packets/`, `replies/`, `transport/` (the only `hidapi` user), `configurator/`,
-`profile/` (embeds `reference/darmoshark-m3-profile.json`), `error/`. One type
-per file, 2-space indent (`rustfmt.toml`), constants in camelCase under
-`#![allow(non_upper_case_globals)]`. `tests/oracle/fixtures/python_oracle.json`
-holds frames and decodes recorded from the Python implementation; the Rust
-output must match it byte for byte.
+GUI: `cd app && pnpm tauri dev` (compiles the Rust side; ask before running it).
+CLI: `cargo run -q -p darmoshark-cli -- <command>` (binary `dms`; `list`,
+`capabilities`, `colors`, `battery`, `dfu`, `dpi`, `use`, `rate`, `debounce`,
+`lod`, `sleep`, `profile`, `button`, `reset`, `info`, `buttons`, `bond`).
 
 ## Architecture
 
-Three layers, strictly one class per file.
+One type per file, 2-space indent (`rustfmt.toml`, `.editorconfig`), constants
+in camelCase under `#![allow(non_upper_case_globals)]`.
 
-**`src/darmoshark/`** — protocol and transport.
-- `protocol.py` (`DarmosharkProtocol`) holds every report id, opcode, usage page
-  and limit; `dms_commands.py` (`DmsCommands`) holds the 31-opcode table and the
-  short/long report routing. Constants live only in these two files.
-- `*_packet.py` are pure builders: static methods returning `(reportId, payload)`
-  bytes, validating ranges before anything reaches the hardware. They never touch
-  a device, which is why the tests can assert byte-identical frames.
-- `*_info.py` are pure decoders for replies (`BaseInfo`, `CableInfo`, `DfuInfo`,
-  `DongleBaseInfo`).
-- `device.py` (`DarmosharkDevice`) is the only file that talks to `hid`.
-- `mouse_configurator.py` (`MouseConfigurator`) composes builders + device into
-  the high-level operations; everything goes through it, never around it.
-- `device_profile.py` reads the vendor's `m3_profile.json` for offline
-  capabilities (DPI range, LED colours per level, polling rates, lift-off steps).
+**`crates/darmoshark`** — protocol and transport, in layer folders.
+- `protocol/`: `DarmosharkProtocol` holds every report id, opcode, usage page
+  and limit; `DmsCommands` the 31-opcode table and the short/long routing.
+  Constants live only there.
+- `packets/`: pure builders returning a `Packet` (report id + payload),
+  validating ranges before anything reaches the hardware. They never touch a
+  device, which is why tests can assert byte-identical frames.
+- `replies/`: pure decoders (`BaseInfo`, `CableInfo`, `DfuInfo`,
+  `DongleBaseInfo`, `BondInfo`); `BaseSnapshot` is whichever form the transport
+  returns.
+- `transport/`: `DarmosharkDevice`, the only `hidapi` user.
+- `configurator/`: `MouseConfigurator` composes builders + device into the
+  high-level operations; everything goes through it, never around it.
+- `profile/`: `DeviceProfile` embeds `reference/darmoshark-m3-profile.json`
+  (DPI range, LED colours per level, polling rates, lift-off steps).
+- `tests/oracle/fixtures/python_oracle.json` holds frames and decodes recorded
+  from the removed Python implementation; the output must still match it byte
+  for byte. Regenerating it is no longer possible — change it by hand only
+  with hardware evidence, and say so in the commit.
+
+**`crates/cli`** — the `dms` binary, clap over `MouseConfigurator`.
+`arguments/` holds the clap definition, `commands/` returns the text each
+command prints (`offline_`, `read_` and `write_commands`), so output is tested
+without a device. `tests/oracle/fixtures/python_cli.json` froze what the Python
+CLI printed.
 
 **`app/`** — Tauri 2. `src-tauri/` is thin: `DeviceGate` opens a fresh
 configurator per command and serialises them (macOS opens the interface
@@ -93,22 +80,16 @@ is the single store, `services/mouse_service.ts` the only `invoke` caller,
 props; `features/configurator/` binds them to the store. Tokens live in
 `theme/tokens.css`, every size even. The reset confirmation is a bottom sheet.
 
-**`crates/cli`** — the `dms` binary, clap over the Rust `MouseConfigurator`.
-`arguments/` holds the clap definition, `commands/` returns the text each
-command prints (`offline_`, `read_` and `write_commands`), so output is tested
-without a device. `tests/oracle/fixtures/python_cli.json` froze what the
-Python CLI printed; the Rust output must match it.
-
 ## Two transports, one payload
 
-The critical asymmetry to keep in mind when touching `device.py` or
-`mouse_configurator.py`:
+The critical asymmetry to keep in mind when touching `darmoshark_device.rs` or
+`mouse_configurator.rs`:
 
 Both live on usage page `0x8C` and are distinguished by product id: the mouse
-itself is `0xFF12`, the receiver `0xFF30` (`DarmosharkProtocol.dongleProductIds`,
-read through `DarmosharkDevice.usesDongleTransport`). The receiver has no vendor
-usage page of its own, and the reports `0xB3`/`0xB5` that the `dms` contract
-talks about exist on neither interface — writing them reaches nothing.
+itself is `0xFF12`, the receiver `0xFF30` (`DarmosharkProtocol::dongleProductIds`,
+read through `DarmosharkDevice::uses_dongle_transport`). The receiver has no
+vendor usage page of its own, and the reports `0xB3`/`0xB5` that the `dms`
+contract talks about exist on neither interface — writing them reaches nothing.
 
 | | Cable (feature `0x52`, 64 B) | Receiver (feature `0x51`, 20 B) |
 |---|---|---|
@@ -118,16 +99,18 @@ talks about exist on neither interface — writing them reaches nothing.
 | DPI levels | max 5 (`0x40`; extended `0x44` ignored) | max 5, no route for `0x44` |
 | Bootloader | the mouse's | the **receiver's** own |
 
-Reading over the receiver has two traps, both encoded in `requestDongle`:
+Reading over the receiver has traps, all encoded in `request_dongle`:
 
 - The `0xE4` status is `0` or `4` while pending, `1` when the reply is ready in
-  the feature report, and **`2` when the RF link is dead**. A dead link never
-  heals — every later command answers `2` while the cursor keeps moving, because
-  HID input rides a separate path. Only replugging the receiver recovers it.
+  the feature report, and **`2` when the RF link is dead**. Every command then
+  answers `2` while the cursor keeps moving, because HID input rides a separate
+  path. Replugging the receiver recovers it; once it also came back on its own,
+  not yet reproduced.
 - The feature buffer holds the *previous* reply until the new one lands, so a
   read that arrives early looks like a valid answer to the wrong question. The
   echoed opcode is checked on every reply; commands that address a slot pass
-  `echoBytes=2` so the index is checked too (all five buttons share one opcode).
+  `echo_bytes = 2` so the index is checked too (all five buttons share one
+  opcode).
 - The ack names no command (`E4 <status> 00`), and a write posts its own `E4 00`
   300-800 ms late. So the input queue is drained before each request, the
   feature buffer is read only on status `1` (or when no ack comes at all, as
@@ -137,19 +120,18 @@ Reading over the receiver has two traps, both encoded in `requestDongle`:
 `setReportRate` is `[65, index, index]`: the vendor contracts name the index
 `level`, which is how the old builder mistook it for the DPI level. The index is
 the position in the profile's 125/500/1000 Hz list, measured by timing the
-mouse's own input reports (8/2/1 ms). Earlier attempts that "did not move the
-nibble" were read with the stale-read bug, so do not trust negative results
-from before the transport fix.
+mouse's own input reports (8/2/1 ms). Do not trust negative results from before
+the transport fix; they were stale reads.
 The sleep timer is cable only: the vendor's receiver contract never sends
 opcode 10, so `write_sleep_timer` refuses over the receiver. Lift-off shares
 its packet with five sensor switches with mixed encodings (`SensorToggles`);
 `write_lift_off` resends the stored ones over the receiver instead of the
 vendor defaults.
 
-`DarmosharkDevice.usesCableTransport` and `usesDongleTransport` select the path;
-`MouseConfigurator._sendAcknowledged` skips ACK checking on both, since neither
-acknowledges a write. A silent device means a *successful* write, not a failure
-— do not add error handling that treats it as one.
+`MouseConfigurator::send_acknowledged` skips ACK checking on both hardware
+transports, since neither acknowledges a write the way the `dms` contract
+describes. A silent device means a *successful* write, not a failure — do not
+add error handling that treats it as one.
 
 ## Constraints
 
