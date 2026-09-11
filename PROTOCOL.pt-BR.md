@@ -149,11 +149,11 @@ Exemplo lido de um M3 com firmware `2.0.9r`:
 perfil 0 · nível ativo 3 · índice de rate 1 · 400/800/1600/3200/4800 ·
 debounce 8 ms · lift-off 1.
 
-> `setReportRate` continua **não verificado**. Nem o nosso pacote (um byte de
-> índice por nível) nem a forma `M` do bundle (uint16 little-endian de Hz por
-> nível) mexem no nibble de rate desse snapshot. O mapeamento do próprio nibble
-> também não está confirmado — é o único ajuste ainda em aberto nos dois
-> transportes.
+> O nibble de rate é o índice da frequência na lista do perfil
+> (125/500/1000 Hz). Medido pelo receptor cronometrando os próprios relatórios
+> de entrada do mouse em movimento contínuo: índice 0 chega a cada 8,00 ms, 1 a
+> cada 2,00 ms, 2 a cada 1,00 ms. O receptor também aceita o índice 3, que o
+> perfil do M3 não declara; do 4 em diante é ignorado.
 
 ## Comandos
 
@@ -280,7 +280,7 @@ com `status = 0` em caso de sucesso.
 | 15 | `driverConfigRecovery` | 0xB5 | reset; `[1]=63` = padrão de fábrica |
 | 35 / 36 | `get/setLightEffectParam` | 0xB5 | iluminação |
 | 64 | `setDpi` | 0xB5 | DPI, até 5 níveis |
-| 65 | `setReportRate` | 0xB5 | `[1..2]` nível, `[3..8]` códigos, `[9]` níveis |
+| 65 | `setReportRate` | 0xB5 | `[1..2]` índice da taxa, repetido; o resto zero. Os dois contratos do fabricante chamam o índice de `level` — não é nível de DPI. Confirmado pelo receptor |
 | 66 | `setSensorLiftCutoff` | 0xB5 | `[1]` LOD, `[2]` wave, `[3]` line, `[4]` motion, `[6]` scroll, `[7]` eSports. wave/line/motion: 1 = ligado, 2 = desligado; scroll/eSports: 2 = ligado, 1 = desligado (confirmado um por vez contra o byte 15 do snapshot). Toda escrita define os cinco, então mudar o lift-off exige reenviar os valores guardados |
 | 67 | `setButtonDebounce` | 0xB5 | `[1]` ms |
 | 68 | `setDpiExtended` | 0xB3 | DPI, mais de 5 níveis |

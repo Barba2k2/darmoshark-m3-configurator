@@ -1,0 +1,13 @@
+.status {
+  min-height: var(--badge-height);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.success {
+  color: var(--color-success);
+}
+
+.error {
+  color: var(--color-danger);
+}

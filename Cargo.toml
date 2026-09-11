@@ -1,3 +1,3 @@
 [workspace]
-members = ["crates/cli","crates/darmoshark"]
+members = ["crates/cli","crates/darmoshark", "app/src-tauri"]
 resolver = "3"

@@ -1,0 +1,18 @@
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vitest/config";
+
+// Tauri expects a fixed port and reads the dev server's output as is.
+export default defineConfig({
+  plugins: [react()],
+  clearScreen: false,
+  server: {
+    port: 1420,
+    strictPort: true,
+    watch: { ignored: ["**/src-tauri/**"] },
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup_tests.ts"],
+    css: { modules: { classNameStrategy: "non-scoped" } },
+  },
+});

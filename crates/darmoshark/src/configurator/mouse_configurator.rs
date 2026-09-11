@@ -164,17 +164,8 @@ impl MouseConfigurator {
     Ok(info)
   }
 
-  pub fn write_report_rates(
-    &self,
-    hertz_values: &[u32],
-    active_level: usize,
-    enabled_levels: Option<usize>,
-  ) -> DarmosharkResult<()> {
-    let codes = hertz_values
-      .iter()
-      .map(|&hertz| ReportRatePacket::rate_to_code(hertz))
-      .collect::<DarmosharkResult<Vec<_>>>()?;
-    let packet = ReportRatePacket::build(&codes, active_level, enabled_levels)?;
+  pub fn write_report_rate(&self, hertz: u32) -> DarmosharkResult<()> {
+    let packet = ReportRatePacket::build(hertz)?;
     self.send_acknowledged(&packet, DmsCommands::setReportRate)
   }
 

@@ -1,0 +1,56 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: var(--color-backdrop);
+  animation: fade-in var(--motion-duration) ease;
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing);
+  padding: var(--spacing) var(--spacing-section) var(--spacing-section);
+  background: var(--color-surface);
+  border-top: 2px solid var(--color-border);
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  animation: slide-in-down var(--motion-duration) ease;
+}
+
+.handle {
+  align-self: center;
+  width: var(--sheet-handle-width);
+  height: var(--sheet-handle-height);
+  border-radius: var(--sheet-handle-height);
+  background: var(--color-border);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-heading);
+}
+
+.body {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-small);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in-down {
+  from {
+    transform: translateY(100%);
+  }
+}

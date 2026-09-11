@@ -34,13 +34,10 @@ pub enum Command {
   },
   /// switch DPI level (reprograms with profile defaults over the cable)
   Use { level: usize },
-  /// set the polling rate per level (affects wireless)
+  /// set the polling rate
   Rate {
-    /// one of 125, 500, 1000 per level
-    #[arg(required = true)]
-    values: Vec<u32>,
-    #[arg(long, default_value_t = 0)]
-    active: usize,
+    /// 125, 500 or 1000
+    hertz: u32,
   },
   /// click debounce, in ms
   Debounce { milliseconds: u32 },

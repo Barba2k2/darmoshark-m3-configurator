@@ -18,29 +18,30 @@ through a CLI and a native window, working offline.
 
 ## Install
 
-The command line is Rust; the graphical interface is still Python while it is
-being ported to Tauri.
+Rust, Node and pnpm are the only requirements.
 
 ```bash
 cargo build --release -p darmoshark-cli
 ```
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+cd app && pnpm install && pnpm tauri build
 ```
+
+The second one produces `target/release/bundle/macos/Darmoshark M3.app`.
 
 ## Usage
 
 ### Graphical interface
 
 ```bash
-PYTHONPATH=src .venv/bin/python src/gui/app.py
+cd app && pnpm tauri dev
 ```
 
 Five DPI levels, each carrying the real colour of the mouse indicator LED, free
 value fields from 50 to 26000, polling rate, lift-off distance, debounce and
-sleep timer.
+sleep timer. Through the receiver the window opens with the values stored in
+the mouse; through the cable, which cannot read them, with the factory ones.
 
 ### Command line
 
@@ -57,7 +58,7 @@ target/release/dms <command>
 | `dfu` | module, firmware and hardware revision | ✅ |
 | `dpi 400 800 1600 3200 4800 --active 3` | program the levels | ✅ |
 | `use 3` | switch the active level | ✅ |
-| `rate 1000 1000 1000 1000 1000` | polling rate (affects wireless modes) | ✅ |
+| `rate 1000` | polling rate: 125, 500 or 1000 Hz | ❔ |
 | `debounce 8` | click debounce, in ms | ✅ |
 | `lod 1` | lift-off distance (1 low, 2 high) | ✅ |
 | `sleep 10` | sleep after N minutes | ✅ |
@@ -83,7 +84,7 @@ mouse's stored configuration back.
 | Identity, firmware, battery | ✅ | ✅ |
 | Up to 5 DPI levels | ✅ | ✅ |
 | 6 or more levels | ❌ extended format is ignored | ❌ no route for the long form |
-| Polling rate | ❔ unverified | ❔ unverified |
+| Polling rate | ❔ cannot be read back | ✅ |
 | Sleep timer | ✅ write (cannot be read back) | ❌ not relayed |
 | Bootloader read | the mouse's | the **receiver's** own |
 
@@ -116,8 +117,8 @@ Other Darmoshark models sharing this protocol may work, but were not tested.
 ```
 crates/darmoshark/ protocol, packet builders, decoders, HID transport (Rust)
 crates/cli/        `dms`, the command line interface
-src/darmoshark/    the same library in Python, kept until the GUI is ported
-src/gui/           PySide6 interface (one widget per file)
+app/               Tauri window: React + Zustand in src/, commands in src-tauri/
+src/darmoshark/    the same library in Python, kept as the parity oracle
 tests/             Python packet encoding tests
 reference/         public vendor definitions for this model
 ```
@@ -126,6 +127,10 @@ reference/         public vendor definitions for this model
 
 ```bash
 cargo test
+```
+
+```bash
+cd app && pnpm typecheck && pnpm lint && pnpm test
 ```
 
 ```bash

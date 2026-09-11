@@ -1,30 +1,24 @@
 use darmoshark::packets::report_rate_packet::ReportRatePacket;
 
 #[test]
-fn encodes_rate_codes() {
-  let codes: Vec<u32> = [1000, 1000, 500]
-    .into_iter()
-    .map(|hertz| ReportRatePacket::rate_to_code(hertz).unwrap())
-    .collect();
-  let packet = ReportRatePacket::build(&codes, 1, None).unwrap();
+fn encodes_the_rate_index_twice() {
+  let packet = ReportRatePacket::build(1000).unwrap();
   assert_eq!(packet.report_id, 0xB5);
-  assert_eq!(packet.payload[0], 65);
-  assert_eq!(packet.payload[1..3], [1, 1]);
-  assert_eq!(packet.payload[3..6], [2, 2, 1]);
-  assert_eq!(packet.payload[9], 3);
+  assert_eq!(packet.payload[0..3], [65, 2, 2]);
+  assert!(packet.payload[3..].iter().all(|&byte| byte == 0));
 }
 
 #[test]
 fn rate_code_round_trip() {
   for hertz in ReportRatePacket::supportedRates {
-    let code = ReportRatePacket::rate_to_code(hertz).unwrap() as u8;
+    let code = ReportRatePacket::rate_to_code(hertz).unwrap();
     assert_eq!(ReportRatePacket::code_to_rate(code), Some(hertz));
   }
 }
 
 #[test]
 fn rejects_unsupported_rate() {
-  assert!(ReportRatePacket::rate_to_code(8000).is_err());
+  assert!(ReportRatePacket::build(8000).is_err());
 }
 
 #[test]

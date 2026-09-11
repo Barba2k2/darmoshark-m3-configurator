@@ -151,11 +151,11 @@ Example, read from an M3 on firmware `2.0.9r`:
 profile 0 · active level 3 · rate index 1 · 400/800/1600/3200/4800 ·
 debounce 8 ms · lift-off 1.
 
-> `setReportRate` remains **unverified**. Neither our packet (one index byte
-> per level) nor the bundle's `M` form (little-endian uint16 Hz per level)
-> moves the rate nibble of this snapshot. The nibble's own mapping is
-> unconfirmed too, so the rate is the one setting still open on both
-> transports.
+> The rate nibble is the index of the frequency in the profile list
+> (125/500/1000 Hz). Measured through the receiver by timing the mouse's own
+> input reports under continuous movement: index 0 arrives every 8.00 ms,
+> 1 every 2.00 ms, 2 every 1.00 ms. The receiver also accepts index 3, which
+> the M3 profile does not declare; indexes 4 and above are ignored.
 
 ## Commands
 
@@ -324,7 +324,7 @@ success.
 | 15 | `driverConfigRecovery` | 0xB5 | reset; `[1]=63` = factory defaults |
 | 35 / 36 | `get/setLightEffectParam` | 0xB5 | lighting |
 | 64 | `setDpi` | 0xB5 | DPI, up to 5 levels |
-| 65 | `setReportRate` | 0xB5 | `[1..2]` level, `[3..8]` codes, `[9]` levels |
+| 65 | `setReportRate` | 0xB5 | `[1..2]` rate index, repeated; the rest zero. Both vendor contracts call the index `level` — it is not a DPI level. Confirmed on the receiver |
 | 66 | `setSensorLiftCutoff` | 0xB5 | `[1]` LOD, `[2]` wave, `[3]` line, `[4]` motion, `[6]` scroll, `[7]` eSports. wave/line/motion: 1 = on, 2 = off; scroll/eSports: 2 = on, 1 = off (confirmed one switch at a time against snapshot byte 15). Every write sets all five, so change lift-off by resending the stored switches |
 | 67 | `setButtonDebounce` | 0xB5 | `[1]` ms |
 | 68 | `setDpiExtended` | 0xB3 | DPI, more than 5 levels |

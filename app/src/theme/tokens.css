@@ -1,0 +1,42 @@
+/* Visual tokens for the configurator. Every metric is an even number. */
+:root {
+  --color-background: #16161a;
+  --color-surface: #1e1e24;
+  --color-surface-raised: #26262e;
+  --color-border: #32323c;
+  --color-text-primary: #f2f2f6;
+  --color-text-secondary: #9a9aa8;
+  --color-text-on-color: #10101a;
+  --color-accent-strong: #3a68d8;
+  --color-accent-hover: #4a7bea;
+  --color-danger: #ff5b6e;
+  --color-success: #3ddc84;
+  --color-backdrop: rgb(0 0 0 / 56%);
+
+  --spacing-tiny: 2px;
+  --spacing-small: 6px;
+  --spacing: 12px;
+  --spacing-large: 20px;
+  --spacing-section: 28px;
+
+  --radius: 10px;
+  --radius-small: 6px;
+  --radius-sheet: 20px;
+
+  --font-size-title: 22px;
+  --font-size-heading: 16px;
+  --font-size-button: 16px;
+  --font-size-body: 14px;
+  --font-size-caption: 12px;
+
+  --level-button-size: 64px;
+  --level-field-height: 30px;
+  --badge-height: 20px;
+  --gauge-height: 8px;
+  --field-width: 128px;
+  --setting-caption-width: 140px;
+  --sheet-handle-width: 40px;
+  --sheet-handle-height: 4px;
+
+  --motion-duration: 240ms;
+}

@@ -55,11 +55,7 @@ fn build(builder: &str, args: &[Value]) -> Packet {
       number(&args[1]) as usize,
       optional(&args[2]),
     ),
-    "rate" => ReportRatePacket::build(
-      &numbers(&args[0]),
-      number(&args[1]) as usize,
-      optional(&args[2]),
-    ),
+    "rate" => ReportRatePacket::build(number(&args[0])),
     "debounce" => TuningPacket::build_debounce(number(&args[0])),
     "sensor" => TuningPacket::build_sensor(byte(0), byte(1), byte(2), byte(3), byte(4), byte(5)),
     "scroll" => Ok(TuningPacket::build_scroll(byte(0), byte(1), byte(2))),
