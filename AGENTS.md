@@ -9,8 +9,9 @@ The `dms` wire protocol was reverse engineered from the vendor's WebHID bundle
 (`darmoshark.cc`) and validated against real hardware; `PROTOCOL.md` is the
 authoritative spec and must be updated alongside any protocol change.
 
-Dependencies: `hidapi`, `PySide6-Essentials`. Everything runs from `.venv` with
-`PYTHONPATH=src` — there is no package install step.
+Rust (`crates/`, `app/src-tauri/`) and a React webview (`app/src/`, pnpm). The
+remaining Python (`src/darmoshark/`, `tests/`) needs only `hidapi` and runs from
+`.venv` with `PYTHONPATH=src`; it is kept as the parity oracle until step 4.
 
 ## Commands
 
@@ -28,7 +29,8 @@ Single test:
 PYTHONPATH=src .venv/bin/python -m unittest tests.test_packets.DpiPacketTest.test_encodes_five_levels_little_endian
 ```
 
-GUI: `PYTHONPATH=src .venv/bin/python src/gui/app.py`
+GUI: `cd app && pnpm tauri dev` (compiles the Rust side first; ask before
+running it). Frontend gate: `cd app && pnpm typecheck && pnpm lint && pnpm test`.
 CLI: `cargo run -q -p darmoshark-cli -- <command>` (binary `dms`; `list`,
 `capabilities`, `colors`, `battery`, `dfu`, `dpi`, `use`, `rate`, `debounce`,
 `lod`, `sleep`, `profile`, `button`, `reset`, `info`, `buttons`, `bond`).
@@ -38,8 +40,8 @@ No linter or type checker is configured for the Python side.
 ### Rust port (in progress)
 
 The Python is being replaced by Rust + Tauri, in steps: `crates/darmoshark`
-(library, done) → `crates/cli` (done, `src/cli.py` removed) → Tauri app →
-remove Python. Until the last step both
+(library, done) → `crates/cli` (done, `src/cli.py` removed) → `app/` (Tauri,
+done, `src/gui/` removed) → remove Python. Until the last step both
 live side by side and a protocol fix goes into both.
 
 ```bash
@@ -76,15 +78,20 @@ Three layers, strictly one class per file.
   `DongleBaseInfo`).
 - `device.py` (`DarmosharkDevice`) is the only file that talks to `hid`.
 - `mouse_configurator.py` (`MouseConfigurator`) composes builders + device into
-  the high-level operations; both CLI and GUI go through it, never around it.
+  the high-level operations; everything goes through it, never around it.
 - `device_profile.py` reads the vendor's `m3_profile.json` for offline
   capabilities (DPI range, LED colours per level, polling rates, lift-off steps).
 
-**`src/gui/`** — PySide6. `main_window.py` wires widgets to `mouse_service.py`,
-which opens a fresh HID handle per operation (so unplugging the mouse cannot
-wedge the window). Widgets in `gui/widgets/` are string-free and take text as
-arguments; all copy lives in `labels.py` (currently Portuguese) and all colours
-and metrics in `theme.py`.
+**`app/`** — Tauri 2. `src-tauri/` is thin: `DeviceGate` opens a fresh
+configurator per command and serialises them (macOS opens the interface
+exclusively, and unplugging must not wedge the window); `dto/` is what crosses
+to the webview, in camelCase; `commands/` holds the `#[tauri::command]`s.
+`src/` is React + Zustand (`useState` is banned by lint): `store/use_mouse_store.ts`
+is the single store, `services/mouse_service.ts` the only `invoke` caller,
+`routes/app_routes.ts` every command name, `labels/labels.ts` all copy
+(Portuguese). `design-system/` components are string-free and take text as
+props; `features/configurator/` binds them to the store. Tokens live in
+`theme/tokens.css`, every size even. The reset confirmation is a bottom sheet.
 
 **`crates/cli`** — the `dms` binary, clap over the Rust `MouseConfigurator`.
 `arguments/` holds the clap definition, `commands/` returns the text each
@@ -127,11 +134,12 @@ Reading over the receiver has two traps, both encoded in `requestDongle`:
   with the bond read), and a receiver write waits for its frame before
   returning — otherwise a read right after a write returns the previous value.
 
-Still unverified after the receiver work: `setReportRate`. Neither
-`ReportRatePacket`'s form (one index byte per level) nor the bundle's `M`-contract
-form (uint16 Hz per level) moves the rate nibble of the snapshot, and the
-nibble's own mapping is unconfirmed. Do not "fix" the builder to the other
-layout without hardware evidence — that swaps one unverified guess for another.
+`setReportRate` is `[65, index, index]`: the vendor contracts name the index
+`level`, which is how the old builder mistook it for the DPI level. The index is
+the position in the profile's 125/500/1000 Hz list, measured by timing the
+mouse's own input reports (8/2/1 ms). Earlier attempts that "did not move the
+nibble" were read with the stale-read bug, so do not trust negative results
+from before the transport fix.
 The sleep timer is cable only: the vendor's receiver contract never sends
 opcode 10, so `write_sleep_timer` refuses over the receiver. Lift-off shares
 its packet with five sensor switches with mixed encodings (`SensorToggles`);

@@ -18,29 +18,30 @@ ajustes em uma CLI e uma janela nativa, funcionando offline.
 
 ## Instalação
 
-A linha de comando é em Rust; a interface gráfica ainda é Python enquanto é
-portada para Tauri.
+Só precisa de Rust, Node e pnpm.
 
 ```bash
 cargo build --release -p darmoshark-cli
 ```
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+cd app && pnpm install && pnpm tauri build
 ```
+
+O segundo gera `target/release/bundle/macos/Darmoshark M3.app`.
 
 ## Uso
 
 ### Interface gráfica
 
 ```bash
-PYTHONPATH=src .venv/bin/python src/gui/app.py
+cd app && pnpm tauri dev
 ```
 
 Cinco níveis de DPI, cada um com a cor real do LED indicador do mouse, campos
 livres de 50 a 26000, taxa de resposta, altura de acionamento, debounce e
-temporizador de suspensão.
+temporizador de suspensão. Pelo receptor a janela abre com os valores gravados
+no mouse; pelo cabo, que não consegue lê-los, com os de fábrica.
 
 ### Linha de comando
 
@@ -57,7 +58,7 @@ target/release/dms <comando>
 | `dfu` | módulo, firmware e revisão de hardware | ✅ |
 | `dpi 400 800 1600 3200 4800 --active 3` | grava os níveis | ✅ |
 | `use 3` | troca o nível ativo | ✅ |
-| `rate 1000 1000 1000 1000 1000` | taxa de resposta (afeta o modo sem fio) | ✅ |
+| `rate 1000` | taxa de resposta: 125, 500 ou 1000 Hz | ❔ |
 | `debounce 8` | debounce do clique, em ms | ✅ |
 | `lod 1` | altura de acionamento (1 baixa, 2 alta) | ✅ |
 | `sleep 10` | suspender após N minutos | ✅ |
@@ -83,7 +84,7 @@ configuração gravada no mouse.
 | Identidade, firmware, bateria | ✅ | ✅ |
 | Até 5 níveis de DPI | ✅ | ✅ |
 | 6 ou mais níveis | ❌ formato estendido é ignorado | ❌ formato longo não tem rota |
-| Taxa de resposta | ❔ não verificado | ❔ não verificado |
+| Taxa de resposta | ❔ sem leitura de volta | ✅ |
 | Timer de suspensão | ✅ escrita (sem leitura de volta) | ❌ não é repassado |
 | Leitura do bootloader | a do mouse | a do **próprio receptor** |
 
@@ -117,8 +118,8 @@ foram testados.
 ```
 crates/darmoshark/ protocolo, montagem de pacotes, decodificadores, transporte HID (Rust)
 crates/cli/        `dms`, a interface de linha de comando
-src/darmoshark/    a mesma biblioteca em Python, mantida até a GUI ser portada
-src/gui/           interface PySide6 (um widget por arquivo)
+app/               janela Tauri: React + Zustand em src/, comandos em src-tauri/
+src/darmoshark/    a mesma biblioteca em Python, mantida como oráculo de paridade
 tests/             testes Python de codificação dos pacotes
 reference/         definições públicas do fabricante para este modelo
 ```
@@ -127,6 +128,10 @@ reference/         definições públicas do fabricante para este modelo
 
 ```bash
 cargo test
+```
+
+```bash
+cd app && pnpm typecheck && pnpm lint && pnpm test
 ```
 
 ```bash
