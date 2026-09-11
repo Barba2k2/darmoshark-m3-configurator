@@ -50,7 +50,7 @@ pub enum Command {
     #[arg(value_parser = clap::value_parser!(u8).range(1..=2))]
     value: u8,
   },
-  /// idle sleep timer, in minutes
+  /// idle sleep timer, in minutes (cable only)
   Sleep { minutes: u32 },
   /// switch onboard profile
   Profile { index: u8 },
